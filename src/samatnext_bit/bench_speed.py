@@ -757,6 +757,12 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
         "experiment": spec["candidate"],
         "model_family": model_family,
         "mode": mode,
+        "dtype": dtype_name,
+        "bf16_supported": bool(torch.cuda.is_bf16_supported()),
+        "gpu_name": torch.cuda.get_device_name() if torch.cuda.is_available() else "cpu",
+        "torch_version": torch.__version__,
+        "cuda_version": torch.version.cuda,
+        "exact_command": f"python -m samatnext_bit.bench_speed --config {base_cfg.get('_config_path', '<config>')}",
         "training_rule": training_rule,
         "dense_or_sparse": "dense" if active_layers == layers else "sparse/logical",
         "layers": layers,
@@ -983,6 +989,7 @@ def main() -> None:
     parser.add_argument("--out-dir", default="runs")
     args = parser.parse_args()
     cfg = load_config(args.config)
+    cfg["_config_path"] = args.config
     dev = device()
     if dev.type != "cuda":
         raise SystemExit("bench_speed requires CUDA")

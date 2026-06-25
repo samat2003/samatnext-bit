@@ -1,0 +1,70 @@
+name: bf16_softmax_vs_gdn_python_512
+validation_experiment: true
+baseline_candidate: dense4_softmax_bf16_chainrule
+dataset: python_code_smoke
+hidden: 512
+heads: 8
+layers: 4
+warmup_steps: 5
+validation_batches: 4
+checkpoints: [0, 50, 100]
+preloaded_train_batches: 128
+lr: 0.0003
+weight_decay: 0.01
+amp: true
+amp_dtype: bfloat16
+torch_compile: false
+cuda_graph: false
+seed: 0
+auto_select_batch: true
+auto_batch_memory_cap_gb: 10.5
+auto_batch_plans:
+  - seq: 1024
+    batches: [16, 24]
+  - seq: 512
+    batches: [32, 48, 64, 96, 128]
+runs:
+  - candidate: dense4_softmax_bf16_chainrule
+    comparison_type: bf16_softmax_vs_gdn_python_512
+    model_family: samatnext
+    layers: 4
+    active_layers: 4
+    recurrent_passes: 1
+    mixer_type: softmax
+    mode: fp_chainrule
+    batch: 16
+    seq: 1024
+    steps: 100
+  - candidate: dense4_gdn_bf16_chainrule
+    comparison_type: bf16_softmax_vs_gdn_python_512
+    model_family: samatnext
+    layers: 4
+    active_layers: 4
+    recurrent_passes: 1
+    mixer_type: simple_gdn
+    mode: fp_chainrule
+    batch: 16
+    seq: 1024
+    steps: 100
+  - candidate: dense4_softmax_bf16_mono
+    comparison_type: bf16_softmax_vs_gdn_python_512
+    model_family: samatnext
+    layers: 4
+    active_layers: 4
+    recurrent_passes: 1
+    mixer_type: softmax
+    mode: fp_mono_update_every_8
+    batch: 16
+    seq: 1024
+    steps: 100
+  - candidate: dense4_gdn_bf16_mono
+    comparison_type: bf16_softmax_vs_gdn_python_512
+    model_family: samatnext
+    layers: 4
+    active_layers: 4
+    recurrent_passes: 1
+    mixer_type: simple_gdn
+    mode: fp_mono_update_every_8
+    batch: 16
+    seq: 1024
+    steps: 100
