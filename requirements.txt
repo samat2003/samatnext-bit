@@ -3,3 +3,4 @@ triton
 PyYAML
 pytest
 tokenizers
+datasets

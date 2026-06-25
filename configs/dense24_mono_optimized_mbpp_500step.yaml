@@ -1,0 +1,51 @@
+name: dense24_mono_optimized_mbpp_500step
+validation_experiment: true
+baseline_candidate: dense24_softmax_mono_optimized_mbpp_500step
+dataset: mbpp_smoke
+hidden: 512
+heads: 8
+layers: 24
+warmup_steps: 5
+validation_batches: 4
+checkpoints: [0, 100, 200, 300, 400, 500]
+generation_prompts:
+  - "def add(a, b):"
+  - "# Task:\nWrite a function"
+preloaded_train_batches: 128
+lr: 0.0003
+weight_decay: 0.01
+amp: true
+amp_dtype: float16
+torch_compile: false
+cuda_graph: false
+seed: 0
+auto_select_batch: true
+auto_batch_memory_cap_gb: 8.0
+calibration_model_family: samatnext
+calibration_layers: 24
+calibration_active_layers: 24
+calibration_recurrent_passes: 1
+calibration_mixer_type: softmax
+calibration_mode: fp_mono_update_every_8
+auto_batch_plans:
+  - seq: 512
+    batches: [4, 8]
+  - seq: 512
+    batches: [6]
+  - seq: 512
+    batches: [4]
+runs:
+  - candidate: dense24_softmax_mono_optimized_mbpp_500step
+    comparison_type: dense24_mono_optimized_mbpp_500step
+    model_family: samatnext
+    optimized: true
+    mono_no_grad_non_update: true
+    layers: 24
+    active_layers: 24
+    recurrent_passes: 1
+    mixer_type: softmax
+    mode: fp_mono_update_every_8
+    batch: 4
+    seq: 512
+    steps: 500
+    lr: 0.0003

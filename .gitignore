@@ -18,3 +18,4 @@ htmlcov/
 checkpoints/
 wandb/
 data/python_code_smoke/
+data/mbpp_smoke/

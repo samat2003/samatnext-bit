@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import itertools
+import json
 import math
 import statistics
 import subprocess
@@ -187,21 +188,24 @@ def random_byte_batches(
     return batches
 
 
-def load_python_code_smoke(dev: torch.device) -> tuple[torch.Tensor, torch.Tensor, dict, object]:
-    root = Path("data/python_code_smoke")
+def load_pretokenized_smoke_dataset(dataset: str, root: Path, build_hint: str, source: str) -> tuple[torch.Tensor, torch.Tensor, dict, object]:
     train_path = root / "train_ids.pt"
     val_path = root / "val_ids.pt"
     tokenizer_path = root / "tokenizer.json"
     if not train_path.exists() or not val_path.exists() or not tokenizer_path.exists():
-        raise FileNotFoundError("run scripts/build_python_code_corpus.py before python_code_smoke benchmarks")
+        raise FileNotFoundError(build_hint)
     train_data = torch.load(train_path, map_location="cpu").long()
     val_data = torch.load(val_path, map_location="cpu").long()
     from tokenizers import Tokenizer
 
     tokenizer = Tokenizer.from_file(str(tokenizer_path))
+    metadata = {}
+    metadata_path = root / "metadata.json"
+    if metadata_path.exists():
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     meta = {
-        "dataset": "python_code_smoke",
-        "source": "generated Python source corpus in data/python_code_smoke",
+        "dataset": dataset,
+        "source": metadata.get("dataset_source", source),
         "vocab_size": int(tokenizer.get_vocab_size()),
         "total_tokens_loaded": int(train_data.numel() + val_data.numel()),
         "train_tokens": int(train_data.numel()),
@@ -209,8 +213,27 @@ def load_python_code_smoke(dev: torch.device) -> tuple[torch.Tensor, torch.Tenso
         "tokenizer_type": "bytelevel_bpe",
         "tokenizer_path": str(tokenizer_path),
         "pretokenized": True,
+        **metadata,
     }
     return train_data, val_data, meta, tokenizer
+
+
+def load_python_code_smoke(dev: torch.device) -> tuple[torch.Tensor, torch.Tensor, dict, object]:
+    return load_pretokenized_smoke_dataset(
+        "python_code_smoke",
+        Path("data/python_code_smoke"),
+        "run scripts/build_python_code_corpus.py before python_code_smoke benchmarks",
+        "generated Python source corpus in data/python_code_smoke",
+    )
+
+
+def load_mbpp_smoke(dev: torch.device) -> tuple[torch.Tensor, torch.Tensor, dict, object]:
+    return load_pretokenized_smoke_dataset(
+        "mbpp_smoke",
+        Path("data/mbpp_smoke"),
+        "run scripts/build_mbpp_smoke_corpus.py before mbpp_smoke benchmarks",
+        "Google Research MBPP smoke corpus in data/mbpp_smoke",
+    )
 
 
 def random_token_batches(
@@ -289,6 +312,18 @@ def generate_tokenizer_samples(
         samples.append(tokenizer.decode(idx[0].tolist()))
     model.train()
     return samples
+
+
+def generate_tokenizer_samples_for_prompts(
+    model: torch.nn.Module,
+    tokenizer: object,
+    dev: torch.device,
+    prompts: list[str],
+) -> dict[str, list[str]]:
+    return {
+        prompt: generate_tokenizer_samples(model, tokenizer, dev, prompt=prompt)
+        for prompt in prompts
+    }
 
 
 def git_commit_hash() -> str:
@@ -556,8 +591,11 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
     use_amp = bool(base_cfg.get("amp", True))
     dataset = base_cfg.get("dataset", "english_validation")
     tokenizer = None
-    if dataset == "python_code_smoke":
-        train_data, val_data, data_meta, tokenizer = load_python_code_smoke(dev)
+    if dataset in {"python_code_smoke", "mbpp_smoke"}:
+        if dataset == "mbpp_smoke":
+            train_data, val_data, data_meta, tokenizer = load_mbpp_smoke(dev)
+        else:
+            train_data, val_data, data_meta, tokenizer = load_python_code_smoke(dev)
         split = int(train_data.numel())
         raw_total = int(train_data.numel() + val_data.numel())
         vocab_size = int(data_meta["vocab_size"])
@@ -759,7 +797,11 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
         checkpoint(step, warmup + step)
     ms = statistics.mean(times)
     wall_clock_seconds = sum(times) / 1000.0
-    samples = generate_tokenizer_samples(model, tokenizer, dev) if tokenizer is not None else generate_samples(model, dev)
+    generation_prompts = list(spec.get("generation_prompts", base_cfg.get("generation_prompts", ["def add(a, b):"])))
+    if tokenizer is not None:
+        samples = generate_tokenizer_samples_for_prompts(model, tokenizer, dev, generation_prompts)
+    else:
+        samples = {prompt: generate_samples(model, dev, prompt=prompt) for prompt in generation_prompts}
     active_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total_params = active_params if model_family == "regular_torch_transformer" else estimate_decoder_params(vocab_size, seq, hidden, layers)
     flops = estimate_training_flops(
@@ -845,6 +887,7 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
         "samples": samples,
         "dataset": dataset,
         "dataset_source": data_meta["source"],
+        "dataset_metadata": data_meta,
         "vocab_size": vocab_size,
         "tokenizer_type": data_meta.get("tokenizer_type", "byte"),
         "pretokenized": bool(data_meta.get("pretokenized", False)),
@@ -868,9 +911,12 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
 
 def calibrate_regular_torch_batch(base_cfg: dict, dev: torch.device) -> dict:
     dataset = base_cfg.get("dataset")
-    if dataset != "python_code_smoke":
-        raise ValueError("auto calibration currently supports python_code_smoke only")
-    train_data, _, data_meta, _ = load_python_code_smoke(dev)
+    if dataset == "python_code_smoke":
+        train_data, _, data_meta, _ = load_python_code_smoke(dev)
+    elif dataset == "mbpp_smoke":
+        train_data, _, data_meta, _ = load_mbpp_smoke(dev)
+    else:
+        raise ValueError("auto calibration currently supports python_code_smoke and mbpp_smoke only")
     hidden = int(base_cfg["hidden"])
     heads = int(base_cfg["heads"])
     layers = int(base_cfg.get("calibration_layers", 4))

@@ -12,6 +12,7 @@ dependencies = [
   "PyYAML",
   "pytest",
   "tokenizers",
+  "datasets",
 ]
 
 [tool.setuptools.packages.find]
