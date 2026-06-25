@@ -585,6 +585,12 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
     recurrent_passes = int(spec.get("recurrent_passes", 1))
     mixer_type = str(spec.get("mixer_type", base_cfg.get("mixer_type", "softmax")))
     model_family = str(spec.get("model_family", "samatnext"))
+    optimized = bool(spec.get("optimized", False))
+    mono_no_grad_non_update = bool(spec.get("mono_no_grad_non_update", False))
+    grad_clip = spec.get("grad_clip", base_cfg.get("grad_clip"))
+    grad_clip = float(grad_clip) if grad_clip is not None else None
+    lr = float(spec.get("lr", base_cfg.get("lr", 3e-4)))
+    warmup_updates = int(spec.get("lr_warmup_updates", base_cfg.get("lr_warmup_updates", 0)))
     if model_family == "regular_torch_transformer" and training_rule != "chainrule":
         raise ValueError("regular_torch_transformer only supports chainrule in this audit")
     torch.manual_seed(int(base_cfg.get("seed", 0)))
@@ -645,7 +651,7 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
             mixer_type=mixer_type,
             dev=dev,
         )
-    opt = torch.optim.AdamW(model.parameters(), lr=float(base_cfg.get("lr", 3e-4)), weight_decay=float(base_cfg.get("weight_decay", 0.01)))
+    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=float(base_cfg.get("weight_decay", 0.01)))
     train_pool = int(spec.get("preloaded_train_batches", base_cfg.get("preloaded_train_batches", min(512, steps + warmup + 2))))
     try:
         train_batches = random_token_batches(train_data, batch, seq, train_pool, dev, int(base_cfg.get("seed", 0)))
@@ -704,8 +710,9 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
     checkpoint(0, 0)
     for step in range(warmup):
         x, y = train_batches[step]
-        with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
-            _, loss = model(x, y)
+        with torch.no_grad():
+            with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
+                _, loss = model(x, y)
         loss_finite = loss_finite and bool(torch.isfinite(loss).item())
     sync(dev)
     reset_peak_memory(dev)
@@ -715,13 +722,25 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
     while step < steps:
         step += 1
         x, y = train_batches[(warmup + step) % len(train_batches)]
+        should_update = training_rule == "chainrule" or (step - 1) % update_every == 0
         start = time.perf_counter()
-        with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
-            _, loss = model(x, y)
+        if training_rule == "mono" and mono_no_grad_non_update and not should_update:
+            with torch.no_grad():
+                with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
+                    _, loss = model(x, y)
+        else:
+            with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
+                _, loss = model(x, y)
         loss_finite = loss_finite and bool(torch.isfinite(loss).item())
-        if training_rule == "chainrule" or (step - 1) % update_every == 0:
+        if should_update:
+            if warmup_updates > 0:
+                scale = min(1.0, float(optimizer_updates + 1) / float(warmup_updates))
+                for group in opt.param_groups:
+                    group["lr"] = lr * scale
             opt.zero_grad(set_to_none=True)
             loss.backward()
+            if grad_clip is not None:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             norm, finite = grad_norm_and_finite(model)
             grad_norms.append(norm)
             gradients_finite = gradients_finite and finite
@@ -763,6 +782,11 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
         "torch_version": torch.__version__,
         "cuda_version": torch.version.cuda,
         "exact_command": f"python -m samatnext_bit.bench_speed --config {base_cfg.get('_config_path', '<config>')}",
+        "optimized": optimized,
+        "mono_no_grad_non_update": mono_no_grad_non_update,
+        "lr": lr,
+        "grad_clip": grad_clip,
+        "lr_warmup_updates": warmup_updates,
         "training_rule": training_rule,
         "dense_or_sparse": "dense" if active_layers == layers else "sparse/logical",
         "layers": layers,
@@ -850,6 +874,16 @@ def calibrate_regular_torch_batch(base_cfg: dict, dev: torch.device) -> dict:
     hidden = int(base_cfg["hidden"])
     heads = int(base_cfg["heads"])
     layers = int(base_cfg.get("calibration_layers", 4))
+    active_layers = int(base_cfg.get("calibration_active_layers", layers))
+    recurrent_passes = int(base_cfg.get("calibration_recurrent_passes", 1))
+    model_family = str(base_cfg.get("calibration_model_family", "regular_torch_transformer"))
+    mixer_type = str(base_cfg.get("calibration_mixer_type", "softmax"))
+    mode = str(base_cfg.get("calibration_mode", "fp_chainrule"))
+    backend, update_every, training_rule = mode_parts(mode)
+    bitnet = backend != "fp"
+    mono_no_grad_non_update = bool(base_cfg.get("calibration_mono_no_grad_non_update", False))
+    grad_clip = base_cfg.get("calibration_grad_clip")
+    grad_clip = float(grad_clip) if grad_clip is not None else None
     vocab_size = int(data_meta["vocab_size"])
     amp_dtype = torch.bfloat16 if base_cfg.get("amp_dtype", "float16") == "bfloat16" else torch.float16
     use_amp = bool(base_cfg.get("amp", True))
@@ -869,21 +903,57 @@ def calibrate_regular_torch_batch(base_cfg: dict, dev: torch.device) -> dict:
             torch.cuda.empty_cache()
             torch.manual_seed(int(base_cfg.get("seed", 0)))
             try:
-                model = RegularTorchDecoderLM(vocab_size, seq, hidden, layers, heads).to(dev)
+                model = build_validation_model(
+                    model_family=model_family,
+                    vocab_size=vocab_size,
+                    seq=seq,
+                    hidden=hidden,
+                    layers=layers,
+                    active_layers=active_layers,
+                    heads=heads,
+                    bitnet=bitnet,
+                    backend=backend,
+                    recurrent_passes=recurrent_passes,
+                    mixer_type=mixer_type,
+                    dev=dev,
+                )
                 opt = torch.optim.AdamW(model.parameters(), lr=float(base_cfg.get("lr", 3e-4)), weight_decay=float(base_cfg.get("weight_decay", 0.01)))
                 x, y = random_token_batches(train_data, batch, seq, 1, dev, int(base_cfg.get("seed", 0)))[0]
                 reset_peak_memory(dev)
-                with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
-                    _, loss = model(x, y)
+                should_update = True
+                if training_rule == "mono" and mono_no_grad_non_update and not should_update:
+                    with torch.no_grad():
+                        with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
+                            _, loss = model(x, y)
+                else:
+                    with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
+                        _, loss = model(x, y)
                 loss_finite = bool(torch.isfinite(loss).item())
-                opt.zero_grad(set_to_none=True)
-                loss.backward()
-                norm, gradients_finite = grad_norm_and_finite(model)
-                opt.step()
+                if should_update:
+                    opt.zero_grad(set_to_none=True)
+                    loss.backward()
+                    if grad_clip is not None:
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+                    norm, gradients_finite = grad_norm_and_finite(model)
+                    opt.step()
+                else:
+                    norm, gradients_finite = float("nan"), True
                 sync(dev)
                 peak = peak_memory_gb(dev)
                 ok = loss_finite and gradients_finite and peak <= memory_cap_gb
-                attempts.append({"seq": seq, "batch": batch, "peak_cuda_memory_gb": peak, "grad_norm": norm, "ok": ok, "oom": False})
+                attempts.append({
+                    "seq": seq,
+                    "batch": batch,
+                    "peak_cuda_memory_gb": peak,
+                    "grad_norm": norm,
+                    "ok": ok,
+                    "oom": False,
+                    "model_family": model_family,
+                    "layers": layers,
+                    "active_layers": active_layers,
+                    "mode": mode,
+                    "mono_no_grad_non_update": mono_no_grad_non_update,
+                })
                 if ok:
                     selected = {"seq": seq, "batch": batch, "peak_cuda_memory_gb": peak}
             except torch.cuda.OutOfMemoryError as exc:
