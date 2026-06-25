@@ -17,3 +17,4 @@ htmlcov/
 *.safetensors
 checkpoints/
 wandb/
+data/python_code_smoke/

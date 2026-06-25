@@ -4,6 +4,7 @@ import argparse
 import itertools
 import math
 import statistics
+import subprocess
 import time
 from pathlib import Path
 
@@ -186,6 +187,43 @@ def random_byte_batches(
     return batches
 
 
+def load_python_code_smoke(dev: torch.device) -> tuple[torch.Tensor, torch.Tensor, dict, object]:
+    root = Path("data/python_code_smoke")
+    train_path = root / "train_ids.pt"
+    val_path = root / "val_ids.pt"
+    tokenizer_path = root / "tokenizer.json"
+    if not train_path.exists() or not val_path.exists() or not tokenizer_path.exists():
+        raise FileNotFoundError("run scripts/build_python_code_corpus.py before python_code_smoke benchmarks")
+    train_data = torch.load(train_path, map_location="cpu").long()
+    val_data = torch.load(val_path, map_location="cpu").long()
+    from tokenizers import Tokenizer
+
+    tokenizer = Tokenizer.from_file(str(tokenizer_path))
+    meta = {
+        "dataset": "python_code_smoke",
+        "source": "generated Python source corpus in data/python_code_smoke",
+        "vocab_size": int(tokenizer.get_vocab_size()),
+        "total_tokens_loaded": int(train_data.numel() + val_data.numel()),
+        "train_tokens": int(train_data.numel()),
+        "validation_tokens": int(val_data.numel()),
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_path": str(tokenizer_path),
+        "pretokenized": True,
+    }
+    return train_data, val_data, meta, tokenizer
+
+
+def random_token_batches(
+    data: torch.Tensor,
+    batch: int,
+    seq: int,
+    count: int,
+    dev: torch.device,
+    seed: int,
+) -> list[tuple[torch.Tensor, torch.Tensor]]:
+    return random_byte_batches(data, batch, seq, count, dev, seed)
+
+
 @torch.no_grad()
 def eval_loss(model: torch.nn.Module, batches: list[tuple[torch.Tensor, torch.Tensor]], amp_dtype: torch.dtype, use_amp: bool) -> float:
     losses = []
@@ -225,6 +263,41 @@ def generate_samples(
     return samples
 
 
+@torch.no_grad()
+def generate_tokenizer_samples(
+    model: torch.nn.Module,
+    tokenizer: object,
+    dev: torch.device,
+    prompt: str = "def add(a, b):",
+    max_new_tokens: int = 96,
+    temperature: float = 0.8,
+    count: int = 3,
+) -> list[str]:
+    model.eval()
+    samples = []
+    for i in range(count):
+        torch.manual_seed(2000 + i)
+        ids = tokenizer.encode(prompt).ids
+        idx = torch.tensor([ids], dtype=torch.long, device=dev)
+        for _ in range(max_new_tokens):
+            idx_cond = idx[:, -model.seq_len :]
+            logits, _ = model(idx_cond)
+            logits = logits[:, -1, :] / temperature
+            probs = torch.softmax(logits, dim=-1)
+            next_id = torch.multinomial(probs, num_samples=1)
+            idx = torch.cat([idx, next_id], dim=1)
+        samples.append(tokenizer.decode(idx[0].tolist()))
+    model.train()
+    return samples
+
+
+def git_commit_hash() -> str:
+    try:
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+    except Exception:
+        return "unknown"
+
+
 def maybe_compile(model: torch.nn.Module, enabled: bool) -> tuple[torch.nn.Module, bool, str | None]:
     if not enabled:
         return model, False, None
@@ -232,6 +305,36 @@ def maybe_compile(model: torch.nn.Module, enabled: bool) -> tuple[torch.nn.Modul
         return torch.compile(model, mode="reduce-overhead"), True, None
     except Exception as exc:
         return model, False, repr(exc)
+
+
+def build_validation_model(
+    *,
+    model_family: str,
+    vocab_size: int,
+    seq: int,
+    hidden: int,
+    layers: int,
+    active_layers: int,
+    heads: int,
+    bitnet: bool,
+    backend: str,
+    recurrent_passes: int,
+    mixer_type: str,
+    dev: torch.device,
+) -> torch.nn.Module:
+    if model_family == "regular_torch_transformer":
+        return RegularTorchDecoderLM(vocab_size, seq, hidden, layers, heads).to(dev)
+    return DecoderLM(
+        vocab_size,
+        seq,
+        hidden,
+        active_layers,
+        heads,
+        bitnet=bitnet,
+        backend=backend,
+        recurrent_passes=recurrent_passes,
+        mixer_type=mixer_type,
+    ).to(dev)
 
 
 def run_one(base_cfg: dict, experiment: dict, mode: str, batch: int, seq: int, dev: torch.device) -> dict:
@@ -452,10 +555,20 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
     amp_dtype = torch.bfloat16 if dtype_name == "bfloat16" else torch.float16
     use_amp = bool(base_cfg.get("amp", True))
     dataset = base_cfg.get("dataset", "english_validation")
-    raw = torch.tensor(list(corpus_bytes(dataset)), dtype=torch.long)
-    split = int(raw.numel() * float(base_cfg.get("train_split", 0.9)))
-    train_data = raw[:split]
-    val_data = raw[split:]
+    tokenizer = None
+    if dataset == "python_code_smoke":
+        train_data, val_data, data_meta, tokenizer = load_python_code_smoke(dev)
+        split = int(train_data.numel())
+        raw_total = int(train_data.numel() + val_data.numel())
+        vocab_size = int(data_meta["vocab_size"])
+    else:
+        raw = torch.tensor(list(corpus_bytes(dataset)), dtype=torch.long)
+        split = int(raw.numel() * float(base_cfg.get("train_split", 0.9)))
+        train_data = raw[:split]
+        val_data = raw[split:]
+        data_meta = dataset_info(dataset)
+        raw_total = int(raw.numel())
+        vocab_size = int(base_cfg.get("vocab_size", 256))
     batch = int(spec["batch"])
     seq = int(spec["seq"])
     steps = int(spec.get("steps", base_cfg.get("steps", 300)))
@@ -477,20 +590,20 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
     torch.manual_seed(int(base_cfg.get("seed", 0)))
     fallback_batch = spec.get("oom_fallback_batch")
     try:
-        if model_family == "regular_torch_transformer":
-            model = RegularTorchDecoderLM(256, seq, hidden, layers, heads).to(dev)
-        else:
-            model = DecoderLM(
-                256,
-                seq,
-                hidden,
-                active_layers,
-                heads,
-                bitnet=bitnet,
-                backend=backend,
-                recurrent_passes=recurrent_passes,
-                mixer_type=mixer_type,
-            ).to(dev)
+        model = build_validation_model(
+            model_family=model_family,
+            vocab_size=vocab_size,
+            seq=seq,
+            hidden=hidden,
+            layers=layers,
+            active_layers=active_layers,
+            heads=heads,
+            bitnet=bitnet,
+            backend=backend,
+            recurrent_passes=recurrent_passes,
+            mixer_type=mixer_type,
+            dev=dev,
+        )
     except torch.cuda.OutOfMemoryError as exc:
         if fallback_batch is None:
             torch.cuda.empty_cache()
@@ -518,25 +631,25 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
             }
         torch.cuda.empty_cache()
         batch = int(fallback_batch)
-        if model_family == "regular_torch_transformer":
-            model = RegularTorchDecoderLM(256, seq, hidden, layers, heads).to(dev)
-        else:
-            model = DecoderLM(
-                256,
-                seq,
-                hidden,
-                active_layers,
-                heads,
-                bitnet=bitnet,
-                backend=backend,
-                recurrent_passes=recurrent_passes,
-                mixer_type=mixer_type,
-            ).to(dev)
+        model = build_validation_model(
+            model_family=model_family,
+            vocab_size=vocab_size,
+            seq=seq,
+            hidden=hidden,
+            layers=layers,
+            active_layers=active_layers,
+            heads=heads,
+            bitnet=bitnet,
+            backend=backend,
+            recurrent_passes=recurrent_passes,
+            mixer_type=mixer_type,
+            dev=dev,
+        )
     opt = torch.optim.AdamW(model.parameters(), lr=float(base_cfg.get("lr", 3e-4)), weight_decay=float(base_cfg.get("weight_decay", 0.01)))
     train_pool = int(spec.get("preloaded_train_batches", base_cfg.get("preloaded_train_batches", min(512, steps + warmup + 2))))
     try:
-        train_batches = random_byte_batches(train_data, batch, seq, train_pool, dev, int(base_cfg.get("seed", 0)))
-        val_batches = random_byte_batches(val_data, batch, seq, val_batches_n, dev, int(base_cfg.get("seed", 0)) + 99)
+        train_batches = random_token_batches(train_data, batch, seq, train_pool, dev, int(base_cfg.get("seed", 0)))
+        val_batches = random_token_batches(val_data, batch, seq, val_batches_n, dev, int(base_cfg.get("seed", 0)) + 99)
     except torch.cuda.OutOfMemoryError as exc:
         if fallback_batch is None or batch == int(fallback_batch):
             torch.cuda.empty_cache()
@@ -564,9 +677,8 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
             }
         torch.cuda.empty_cache()
         batch = int(fallback_batch)
-        train_batches = random_byte_batches(train_data, batch, seq, train_pool, dev, int(base_cfg.get("seed", 0)))
-        val_batches = random_byte_batches(val_data, batch, seq, val_batches_n, dev, int(base_cfg.get("seed", 0)) + 99)
-    data_meta = dataset_info(dataset)
+        train_batches = random_token_batches(train_data, batch, seq, train_pool, dev, int(base_cfg.get("seed", 0)))
+        val_batches = random_token_batches(val_data, batch, seq, val_batches_n, dev, int(base_cfg.get("seed", 0)) + 99)
     checkpoint_rows = []
     grad_norms = []
     gradients_finite = True
@@ -628,9 +740,9 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
         checkpoint(step, warmup + step)
     ms = statistics.mean(times)
     wall_clock_seconds = sum(times) / 1000.0
-    samples = generate_samples(model, dev)
+    samples = generate_tokenizer_samples(model, tokenizer, dev) if tokenizer is not None else generate_samples(model, dev)
     active_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    total_params = active_params if model_family == "regular_torch_transformer" else estimate_decoder_params(256, seq, hidden, layers)
+    total_params = active_params if model_family == "regular_torch_transformer" else estimate_decoder_params(vocab_size, seq, hidden, layers)
     flops = estimate_training_flops(
         training_rule=training_rule,
         total_params=total_params,
@@ -703,23 +815,102 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
         "samples": samples,
         "dataset": dataset,
         "dataset_source": data_meta["source"],
-        "vocab_size": data_meta["vocab_size"],
+        "vocab_size": vocab_size,
+        "tokenizer_type": data_meta.get("tokenizer_type", "byte"),
+        "pretokenized": bool(data_meta.get("pretokenized", False)),
+        "tokenization_in_timed_region": False,
         "total_tokens_loaded": int(data_meta["total_tokens_loaded"]),
         "train_tokens": int(split),
-        "validation_tokens": int(raw.numel() - split),
+        "validation_tokens": int(raw_total - split),
         "preloaded_cuda_batches": True,
         "batch_sampling_in_timed_region": False,
+        "dataloader_in_timed_region": False,
         "token_sec_formula": "tokens/sec = batch * (seq - 1) / mean_step_time",
+        "git_commit": git_commit_hash(),
         "oom": False,
-        "requested_batch": int(spec["batch"]),
-        "oom_fallback_used": batch != int(spec["batch"]),
+        "requested_batch": int(spec.get("requested_batch", spec["batch"])),
+        "actual_batch": batch,
+        "requested_seq": int(spec.get("requested_seq", spec["seq"])),
+        "actual_seq": seq,
+        "oom_fallback_used": batch != int(spec.get("requested_batch", spec["batch"])) or seq != int(spec.get("requested_seq", spec["seq"])),
     }
+
+
+def calibrate_regular_torch_batch(base_cfg: dict, dev: torch.device) -> dict:
+    dataset = base_cfg.get("dataset")
+    if dataset != "python_code_smoke":
+        raise ValueError("auto calibration currently supports python_code_smoke only")
+    train_data, _, data_meta, _ = load_python_code_smoke(dev)
+    hidden = int(base_cfg["hidden"])
+    heads = int(base_cfg["heads"])
+    layers = int(base_cfg.get("calibration_layers", 4))
+    vocab_size = int(data_meta["vocab_size"])
+    amp_dtype = torch.bfloat16 if base_cfg.get("amp_dtype", "float16") == "bfloat16" else torch.float16
+    use_amp = bool(base_cfg.get("amp", True))
+    memory_cap_gb = float(base_cfg.get("auto_batch_memory_cap_gb", 10.5))
+    plans = base_cfg.get(
+        "auto_batch_plans",
+        [
+            {"seq": 1024, "batches": [16, 24, 32, 48, 64]},
+            {"seq": 512, "batches": [32, 48, 64, 96, 128]},
+        ],
+    )
+    selected = None
+    attempts = []
+    for plan in plans:
+        seq = int(plan["seq"])
+        for batch in [int(x) for x in plan["batches"]]:
+            torch.cuda.empty_cache()
+            torch.manual_seed(int(base_cfg.get("seed", 0)))
+            try:
+                model = RegularTorchDecoderLM(vocab_size, seq, hidden, layers, heads).to(dev)
+                opt = torch.optim.AdamW(model.parameters(), lr=float(base_cfg.get("lr", 3e-4)), weight_decay=float(base_cfg.get("weight_decay", 0.01)))
+                x, y = random_token_batches(train_data, batch, seq, 1, dev, int(base_cfg.get("seed", 0)))[0]
+                reset_peak_memory(dev)
+                with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
+                    _, loss = model(x, y)
+                loss_finite = bool(torch.isfinite(loss).item())
+                opt.zero_grad(set_to_none=True)
+                loss.backward()
+                norm, gradients_finite = grad_norm_and_finite(model)
+                opt.step()
+                sync(dev)
+                peak = peak_memory_gb(dev)
+                ok = loss_finite and gradients_finite and peak <= memory_cap_gb
+                attempts.append({"seq": seq, "batch": batch, "peak_cuda_memory_gb": peak, "grad_norm": norm, "ok": ok, "oom": False})
+                if ok:
+                    selected = {"seq": seq, "batch": batch, "peak_cuda_memory_gb": peak}
+            except torch.cuda.OutOfMemoryError as exc:
+                torch.cuda.empty_cache()
+                attempts.append({"seq": seq, "batch": batch, "ok": False, "oom": True, "error": str(exc).splitlines()[0]})
+            finally:
+                for name in ("model", "opt", "x", "y", "loss"):
+                    if name in locals():
+                        del locals()[name]
+                torch.cuda.empty_cache()
+        if selected is not None:
+            break
+    if selected is None:
+        raise RuntimeError(f"no stable calibration candidate under {memory_cap_gb} GB")
+    selected["attempts"] = attempts
+    selected["memory_cap_gb"] = memory_cap_gb
+    return selected
 
 
 def run_validation(cfg: dict, dev: torch.device) -> dict:
     rows = []
     budgets = {}
+    calibration = None
+    if cfg.get("auto_select_batch", False):
+        calibration = calibrate_regular_torch_batch(cfg, dev)
+        print(f"calibration selected seq={calibration['seq']} batch={calibration['batch']} peak={calibration['peak_cuda_memory_gb']:.3f}GB", flush=True)
     for spec in cfg["runs"]:
+        if calibration is not None:
+            spec = dict(spec)
+            spec["requested_batch"] = int(spec.get("batch", calibration["batch"]))
+            spec["requested_seq"] = int(spec.get("seq", calibration["seq"]))
+            spec["batch"] = int(calibration["batch"])
+            spec["seq"] = int(calibration["seq"])
         if "max_seconds_from" in spec:
             source = spec["max_seconds_from"]
             if source not in budgets:
@@ -783,7 +974,7 @@ def run_validation(cfg: dict, dev: torch.device) -> dict:
                 row["speedup_vs_dense24_chainrule"] = "n/a"
                 row["flop_reduction_vs_dense24_chainrule"] = "n/a"
                 row["quality_delta_vs_dense24_chainrule"] = "n/a"
-    return {"config": cfg["name"], "versions": versions(), "results": rows}
+    return {"config": cfg["name"], "versions": versions(), "calibration": calibration, "results": rows}
 
 
 def main() -> None:

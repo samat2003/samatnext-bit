@@ -2,3 +2,4 @@ torch
 triton
 PyYAML
 pytest
+tokenizers
