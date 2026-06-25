@@ -13,6 +13,20 @@ Milestone hardware:
 - NVIDIA GeForce RTX 5070 Ti Laptop GPU
 - 12GB class consumer laptop GPU
 
+Recorded milestone software:
+
+- Python: 3.12.3
+- PyTorch: 2.11.0+cu128
+- CUDA: 12.8
+- Triton: 3.6.0
+
+Release identifiers:
+
+- Repository: `https://github.com/samat2003/samatnext-bit`
+- Branch: `master`
+- Base release commit: `ecdd51c`
+- Release tag: `mono-forward-smoke-v1`
+
 ## Setup
 
 ```bash
@@ -23,6 +37,14 @@ pip install -r requirements.txt
 ```
 
 If `data/english_validation.txt` is missing, place Tiny Shakespeare text at that path before running the validation benchmarks. The milestone runs used `data/english_validation.txt` with 1,115,394 bytes.
+
+Dataset details:
+
+- source: Tiny Shakespeare text
+- local path: `data/english_validation.txt`
+- vocab size: 256 byte values
+- split: 90% train, 10% validation
+- validation batches: fixed by benchmark config and seed
 
 ## Tests
 
