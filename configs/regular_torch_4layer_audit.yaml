@@ -1,0 +1,64 @@
+name: regular_torch_4layer_audit
+validation_experiment: true
+baseline_candidate: regular_torch_4layer_chainrule
+dataset: english_validation
+train_split: 0.9
+hidden: 128
+heads: 4
+layers: 4
+warmup_steps: 5
+validation_batches: 8
+checkpoints: [0, 100, 200, 300, 400, 500]
+preloaded_train_batches: 512
+lr: 0.0003
+weight_decay: 0.01
+amp: true
+amp_dtype: float16
+torch_compile: false
+cuda_graph: false
+seed: 0
+runs:
+  - candidate: regular_torch_4layer_chainrule
+    comparison_type: regular_torch_4layer_audit
+    model_family: regular_torch_transformer
+    layers: 4
+    active_layers: 4
+    recurrent_passes: 1
+    mixer_type: softmax
+    mode: fp_chainrule
+    batch: 64
+    seq: 256
+    steps: 500
+  - candidate: samatnext_dense4_softmax_chainrule
+    comparison_type: regular_torch_4layer_audit
+    model_family: samatnext
+    layers: 4
+    active_layers: 4
+    recurrent_passes: 1
+    mixer_type: softmax
+    mode: fp_chainrule
+    batch: 64
+    seq: 256
+    steps: 500
+  - candidate: samatnext_dense4_softmax_mono
+    comparison_type: regular_torch_4layer_audit
+    model_family: samatnext
+    layers: 4
+    active_layers: 4
+    recurrent_passes: 1
+    mixer_type: softmax
+    mode: fp_mono_update_every_8
+    batch: 64
+    seq: 256
+    steps: 500
+  - candidate: samatnext_sparse4_24_softmax_mono
+    comparison_type: regular_torch_4layer_audit
+    model_family: samatnext
+    layers: 24
+    active_layers: 4
+    recurrent_passes: 1
+    mixer_type: softmax
+    mode: fp_mono_update_every_8
+    batch: 64
+    seq: 256
+    steps: 500

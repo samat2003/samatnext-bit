@@ -4,7 +4,7 @@ import torch
 
 from samatnext_bit.bitlinear import BitLinear, base3_lut5_table, pack_ternary_2bit, pack_ternary_base3, ternarize_shadow, unpack_ternary_2bit, unpack_ternary_base3
 from samatnext_bit.data import ByteBatcher
-from samatnext_bit.bench_speed import mode_parts
+from samatnext_bit.bench_speed import RegularTorchDecoderLM, mode_parts
 from samatnext_bit.flops import estimate_training_flops
 from samatnext_bit.model import DecoderLM
 from samatnext_bit.train import train_mode
@@ -36,6 +36,16 @@ def test_simple_gdn_model_forward_backward_cpu():
     assert not m.official_gdn
     assert m.linear_recurrent_mixer
     assert all(block.linear_recurrent_mixer for block in m.blocks)
+
+
+def test_regular_torch_decoder_forward_backward_cpu():
+    m = RegularTorchDecoderLM(256, seq_len=16, hidden=32, layers=2, heads=4)
+    x = torch.randint(0, 256, (2, 16))
+    logits, loss = m(x, x)
+    assert logits.shape == (2, 16, 256)
+    assert loss.item() > 0
+    loss.backward()
+    assert m.bitlinear_modules() == []
 
 
 def test_bitlinear_fake_backward():

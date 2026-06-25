@@ -8,6 +8,8 @@ import time
 from pathlib import Path
 
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import yaml
 
 from .data import ByteBatcher, corpus_bytes, dataset_info
@@ -35,6 +37,60 @@ DEFAULT_EXPERIMENT = {
     "active_layers": None,
     "recurrent_passes": 1,
 }
+
+
+class RegularTorchBlock(nn.Module):
+    def __init__(self, hidden: int, heads: int):
+        super().__init__()
+        assert hidden % heads == 0
+        self.hidden = hidden
+        self.heads = heads
+        self.head_dim = hidden // heads
+        self.n1 = nn.LayerNorm(hidden)
+        self.qkv = nn.Linear(hidden, hidden * 3)
+        self.proj = nn.Linear(hidden, hidden)
+        self.n2 = nn.LayerNorm(hidden)
+        self.fc1 = nn.Linear(hidden, hidden * 4)
+        self.fc2 = nn.Linear(hidden * 4, hidden)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        b, t, c = x.shape
+        q, k, v = self.qkv(self.n1(x)).chunk(3, dim=-1)
+        q = q.view(b, t, self.heads, self.head_dim).transpose(1, 2)
+        k = k.view(b, t, self.heads, self.head_dim).transpose(1, 2)
+        v = v.view(b, t, self.heads, self.head_dim).transpose(1, 2)
+        y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+        y = y.transpose(1, 2).contiguous().view(b, t, c)
+        x = x + self.proj(y)
+        x = x + self.fc2(F.gelu(self.fc1(self.n2(x))))
+        return x
+
+
+class RegularTorchDecoderLM(nn.Module):
+    def __init__(self, vocab_size: int, seq_len: int, hidden: int, layers: int, heads: int):
+        super().__init__()
+        self.seq_len = seq_len
+        self.mixer_type = "softmax"
+        self.tok = nn.Embedding(vocab_size, hidden)
+        self.pos = nn.Embedding(seq_len, hidden)
+        self.blocks = nn.ModuleList([RegularTorchBlock(hidden, heads) for _ in range(layers)])
+        self.norm = nn.LayerNorm(hidden)
+        self.lm_head = nn.Linear(hidden, vocab_size)
+
+    def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None):
+        _, t = idx.shape
+        pos = torch.arange(t, device=idx.device)
+        x = self.tok(idx) + self.pos(pos)[None, :, :]
+        for block in self.blocks:
+            x = block(x)
+        logits = self.lm_head(self.norm(x))
+        loss = None
+        if targets is not None:
+            loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
+        return logits, loss
+
+    def bitlinear_modules(self):
+        return []
 
 
 def load_config(path: str) -> dict:
@@ -415,20 +471,26 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
     active_layers = int(spec["active_layers"])
     recurrent_passes = int(spec.get("recurrent_passes", 1))
     mixer_type = str(spec.get("mixer_type", base_cfg.get("mixer_type", "softmax")))
+    model_family = str(spec.get("model_family", "samatnext"))
+    if model_family == "regular_torch_transformer" and training_rule != "chainrule":
+        raise ValueError("regular_torch_transformer only supports chainrule in this audit")
     torch.manual_seed(int(base_cfg.get("seed", 0)))
     fallback_batch = spec.get("oom_fallback_batch")
     try:
-        model = DecoderLM(
-            256,
-            seq,
-            hidden,
-            active_layers,
-            heads,
-            bitnet=bitnet,
-            backend=backend,
-            recurrent_passes=recurrent_passes,
-            mixer_type=mixer_type,
-        ).to(dev)
+        if model_family == "regular_torch_transformer":
+            model = RegularTorchDecoderLM(256, seq, hidden, layers, heads).to(dev)
+        else:
+            model = DecoderLM(
+                256,
+                seq,
+                hidden,
+                active_layers,
+                heads,
+                bitnet=bitnet,
+                backend=backend,
+                recurrent_passes=recurrent_passes,
+                mixer_type=mixer_type,
+            ).to(dev)
     except torch.cuda.OutOfMemoryError as exc:
         if fallback_batch is None:
             torch.cuda.empty_cache()
@@ -450,22 +512,26 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
                 "backend": backend,
                 "update_every": update_every,
                 "mixer_type": mixer_type,
+                "model_family": model_family,
                 "official_gdn": False,
                 "linear_recurrent_mixer": mixer_type == "simple_gdn",
             }
         torch.cuda.empty_cache()
         batch = int(fallback_batch)
-        model = DecoderLM(
-            256,
-            seq,
-            hidden,
-            active_layers,
-            heads,
-            bitnet=bitnet,
-            backend=backend,
-            recurrent_passes=recurrent_passes,
-            mixer_type=mixer_type,
-        ).to(dev)
+        if model_family == "regular_torch_transformer":
+            model = RegularTorchDecoderLM(256, seq, hidden, layers, heads).to(dev)
+        else:
+            model = DecoderLM(
+                256,
+                seq,
+                hidden,
+                active_layers,
+                heads,
+                bitnet=bitnet,
+                backend=backend,
+                recurrent_passes=recurrent_passes,
+                mixer_type=mixer_type,
+            ).to(dev)
     opt = torch.optim.AdamW(model.parameters(), lr=float(base_cfg.get("lr", 3e-4)), weight_decay=float(base_cfg.get("weight_decay", 0.01)))
     train_pool = int(spec.get("preloaded_train_batches", base_cfg.get("preloaded_train_batches", min(512, steps + warmup + 2))))
     try:
@@ -492,6 +558,7 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
                 "backend": backend,
                 "update_every": update_every,
                 "mixer_type": mixer_type,
+                "model_family": model_family,
                 "official_gdn": False,
                 "linear_recurrent_mixer": mixer_type == "simple_gdn",
             }
@@ -563,7 +630,7 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
     wall_clock_seconds = sum(times) / 1000.0
     samples = generate_samples(model, dev)
     active_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    total_params = estimate_decoder_params(256, seq, hidden, layers)
+    total_params = active_params if model_family == "regular_torch_transformer" else estimate_decoder_params(256, seq, hidden, layers)
     flops = estimate_training_flops(
         training_rule=training_rule,
         total_params=total_params,
@@ -576,6 +643,7 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
         "completed": True,
         "config": base_cfg["name"],
         "experiment": spec["candidate"],
+        "model_family": model_family,
         "mode": mode,
         "training_rule": training_rule,
         "dense_or_sparse": "dense" if active_layers == layers else "sparse/logical",
@@ -641,6 +709,7 @@ def run_validation_one(base_cfg: dict, spec: dict, dev: torch.device) -> dict:
         "validation_tokens": int(raw.numel() - split),
         "preloaded_cuda_batches": True,
         "batch_sampling_in_timed_region": False,
+        "token_sec_formula": "tokens/sec = batch * (seq - 1) / mean_step_time",
         "oom": False,
         "requested_batch": int(spec["batch"]),
         "oom_fallback_used": batch != int(spec["batch"]),
