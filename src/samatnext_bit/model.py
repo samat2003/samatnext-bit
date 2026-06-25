@@ -22,12 +22,17 @@ def linear(bitnet: bool, hidden: int, out: int, backend: str) -> nn.Module:
 
 
 class Block(nn.Module):
-    def __init__(self, hidden: int, heads: int, bitnet: bool = False, backend: str = "fake"):
+    def __init__(self, hidden: int, heads: int, bitnet: bool = False, backend: str = "fake", mixer_type: str = "softmax"):
         super().__init__()
         assert hidden % heads == 0
+        if mixer_type not in {"softmax", "simple_gdn"}:
+            raise ValueError(f"unsupported mixer_type={mixer_type!r}")
         self.hidden = hidden
         self.heads = heads
         self.head_dim = hidden // heads
+        self.mixer_type = mixer_type
+        self.official_gdn = False
+        self.linear_recurrent_mixer = mixer_type == "simple_gdn"
         self.n1 = RMSNorm(hidden)
         self.qkv = linear(bitnet, hidden, hidden * 3, backend)
         self.proj = linear(bitnet, hidden, hidden, backend)
@@ -36,6 +41,11 @@ class Block(nn.Module):
         self.fc2 = linear(bitnet, hidden * 4, hidden, backend)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.mixer_type == "simple_gdn":
+            return self.forward_simple_gdn(x)
+        return self.forward_softmax(x)
+
+    def forward_softmax(self, x: torch.Tensor) -> torch.Tensor:
         b, t, c = x.shape
         q, k, v = self.qkv(self.n1(x)).chunk(3, dim=-1)
         q = q.view(b, t, self.heads, self.head_dim).transpose(1, 2)
@@ -43,6 +53,19 @@ class Block(nn.Module):
         v = v.view(b, t, self.heads, self.head_dim).transpose(1, 2)
         y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
         y = y.transpose(1, 2).contiguous().view(b, t, c)
+        x = x + self.proj(y)
+        x = x + self.fc2(F.gelu(self.fc1(self.n2(x))))
+        return x
+
+    def forward_simple_gdn(self, x: torch.Tensor) -> torch.Tensor:
+        _, t, _ = x.shape
+        value, gate, delta = self.qkv(self.n1(x)).chunk(3, dim=-1)
+        value = torch.tanh(value)
+        gate = torch.sigmoid(gate)
+        delta = F.softplus(delta)
+        state = torch.cumsum(value * delta, dim=1)
+        normalizer = torch.cumsum(delta, dim=1).clamp_min(1e-4)
+        y = gate * (state / normalizer)
         x = x + self.proj(y)
         x = x + self.fc2(F.gelu(self.fc1(self.n2(x))))
         return x
@@ -59,15 +82,19 @@ class DecoderLM(nn.Module):
         bitnet: bool = False,
         backend: str = "fake",
         recurrent_passes: int = 1,
+        mixer_type: str = "softmax",
     ):
         super().__init__()
         self.seq_len = seq_len
         self.bitnet = bitnet
         self.backend = backend
         self.recurrent_passes = recurrent_passes
+        self.mixer_type = mixer_type
+        self.official_gdn = False
+        self.linear_recurrent_mixer = mixer_type == "simple_gdn"
         self.tok = nn.Embedding(vocab_size, hidden)
         self.pos = nn.Embedding(seq_len, hidden)
-        self.blocks = nn.ModuleList([Block(hidden, heads, bitnet, backend) for _ in range(layers)])
+        self.blocks = nn.ModuleList([Block(hidden, heads, bitnet, backend, mixer_type) for _ in range(layers)])
         self.norm = RMSNorm(hidden)
         self.lm_head = linear(bitnet, hidden, vocab_size, backend)
 

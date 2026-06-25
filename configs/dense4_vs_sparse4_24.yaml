@@ -1,0 +1,56 @@
+name: fp16_dense4_vs_sparse4_24
+validation_experiment: true
+baseline_candidate: dense4_chainrule
+dataset: english_validation
+train_split: 0.9
+hidden: 128
+heads: 4
+layers: 4
+warmup_steps: 5
+validation_batches: 8
+checkpoints: [0, 100, 200, 300, 400, 500]
+preloaded_train_batches: 512
+lr: 0.0003
+weight_decay: 0.01
+amp: true
+amp_dtype: float16
+torch_compile: false
+cuda_graph: false
+seed: 0
+runs:
+  - candidate: dense4_chainrule
+    comparison_type: dense4_vs_sparse4_24
+    layers: 4
+    active_layers: 4
+    recurrent_passes: 1
+    mode: fp_chainrule
+    batch: 64
+    seq: 256
+    steps: 500
+  - candidate: dense4_mono
+    comparison_type: dense4_vs_sparse4_24
+    layers: 4
+    active_layers: 4
+    recurrent_passes: 1
+    mode: fp_mono_update_every_8
+    batch: 64
+    seq: 256
+    steps: 500
+  - candidate: sparse4_24_chainrule
+    comparison_type: dense4_vs_sparse4_24
+    layers: 24
+    active_layers: 4
+    recurrent_passes: 1
+    mode: fp_chainrule
+    batch: 64
+    seq: 256
+    steps: 500
+  - candidate: sparse4_24_mono
+    comparison_type: dense4_vs_sparse4_24
+    layers: 24
+    active_layers: 4
+    recurrent_passes: 1
+    mode: fp_mono_update_every_8
+    batch: 64
+    seq: 256
+    steps: 500

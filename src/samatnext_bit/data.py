@@ -12,7 +12,7 @@ TINY_CODE = (
 )
 
 
-def _corpus(name: str) -> bytes:
+def corpus_bytes(name: str) -> bytes:
     if name == "tiny_code":
         return (TINY_CODE * 4096).encode("utf-8")
     if name == "pattern":
@@ -26,14 +26,25 @@ def _corpus(name: str) -> bytes:
         text = path.read_text(encoding="utf-8")
         repeats = max(1, (1_000_000 // max(1, len(text))) + 1)
         return (text * repeats).encode("utf-8")
+    if name == "english_validation":
+        path = Path("data/english_validation.txt")
+        if not path.exists():
+            raise FileNotFoundError("data/english_validation.txt is missing")
+        return path.read_bytes()
     raise ValueError(f"unknown dataset {name!r}")
 
 
+def _corpus(name: str) -> bytes:
+    return corpus_bytes(name)
+
+
 def dataset_info(name: str) -> dict[str, int | str]:
-    data = _corpus(name)
+    data = corpus_bytes(name)
     source = "builtin synthetic"
     if name == "english_smoke":
         source = "local fallback data/english_smoke.txt repeated in memory"
+    if name == "english_validation":
+        source = "downloaded Tiny Shakespeare data/english_validation.txt"
     return {
         "dataset": name,
         "source": source,

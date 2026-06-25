@@ -4,3 +4,16 @@ __pycache__/
 *.pyc
 src/*.egg-info/
 runs/
+build/
+dist/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+checkpoints/
+wandb/

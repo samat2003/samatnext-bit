@@ -1,0 +1,57 @@
+name: fp16_chainrule_vs_mono_24layer
+validation_experiment: true
+baseline_candidate: dense24_chainrule
+dataset: english_validation
+train_split: 0.9
+hidden: 128
+heads: 4
+layers: 24
+warmup_steps: 5
+validation_batches: 8
+checkpoints: [0, 100, 200, 300, 400, 500]
+preloaded_train_batches: 512
+lr: 0.0003
+weight_decay: 0.01
+amp: true
+amp_dtype: float16
+torch_compile: false
+cuda_graph: false
+seed: 0
+runs:
+  - candidate: dense24_chainrule
+    comparison_type: chainrule_vs_mono
+    layers: 24
+    active_layers: 24
+    recurrent_passes: 1
+    mode: fp_chainrule
+    batch: 96
+    oom_fallback_batch: 64
+    seq: 256
+    steps: 500
+  - candidate: dense24_mono
+    comparison_type: chainrule_vs_mono
+    layers: 24
+    active_layers: 24
+    recurrent_passes: 1
+    mode: fp_mono_update_every_16
+    batch: 96
+    seq: 256
+    steps: 500
+  - candidate: sparse4_24_chainrule
+    comparison_type: chainrule_vs_mono
+    layers: 24
+    active_layers: 4
+    recurrent_passes: 1
+    mode: fp_chainrule
+    batch: 64
+    seq: 256
+    steps: 500
+  - candidate: sparse4_24_mono
+    comparison_type: chainrule_vs_mono
+    layers: 24
+    active_layers: 4
+    recurrent_passes: 1
+    mode: fp_mono_update_every_8
+    batch: 64
+    seq: 256
+    steps: 500

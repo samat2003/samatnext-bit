@@ -4,6 +4,8 @@ import torch
 
 from samatnext_bit.bitlinear import BitLinear, base3_lut5_table, pack_ternary_2bit, pack_ternary_base3, ternarize_shadow, unpack_ternary_2bit, unpack_ternary_base3
 from samatnext_bit.data import ByteBatcher
+from samatnext_bit.bench_speed import mode_parts
+from samatnext_bit.flops import estimate_training_flops
 from samatnext_bit.model import DecoderLM
 from samatnext_bit.train import train_mode
 
@@ -21,6 +23,19 @@ def test_model_forward_cpu():
     logits, loss = m(x, x)
     assert logits.shape == (2, 16, 256)
     assert loss.item() > 0
+
+
+def test_simple_gdn_model_forward_backward_cpu():
+    m = DecoderLM(256, seq_len=16, hidden=32, layers=2, heads=4, mixer_type="simple_gdn")
+    x = torch.randint(0, 256, (2, 16))
+    logits, loss = m(x, x)
+    assert logits.shape == (2, 16, 256)
+    assert loss.item() > 0
+    loss.backward()
+    assert m.mixer_type == "simple_gdn"
+    assert not m.official_gdn
+    assert m.linear_recurrent_mixer
+    assert all(block.linear_recurrent_mixer for block in m.blocks)
 
 
 def test_bitlinear_fake_backward():
@@ -187,6 +202,32 @@ def test_train_one_step_cpu():
     r = train_mode(cfg, "bitnet_fake_ternary_mono_update_every_2", torch.device("cpu"))
     assert r.completed
     assert r.params > 0
+
+
+def test_speed_mode_parts_chainrule_and_mono():
+    assert mode_parts("fp_chainrule") == ("fp", 1, "chainrule")
+    assert mode_parts("fp_mono_update_every_16") == ("fp", 16, "mono")
+
+
+def test_flop_estimator_chainrule_and_mono_average():
+    chain = estimate_training_flops(
+        training_rule="chainrule",
+        total_params=200,
+        active_params=100,
+        active_layers=4,
+        update_every=1,
+    )
+    mono = estimate_training_flops(
+        training_rule="mono",
+        total_params=200,
+        active_params=100,
+        active_layers=4,
+        update_every=4,
+    )
+    assert chain.forward_flops_per_token == 200
+    assert chain.total_training_flops_per_token == 600
+    assert mono.forward_flops_per_token == 200
+    assert mono.total_training_flops_per_token == 300
 
 
 def test_benchmark_metadata_for_packed_cpu_fallback():
