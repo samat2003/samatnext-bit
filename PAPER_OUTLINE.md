@@ -1,87 +1,117 @@
-# Consumer-GPU Smoke Benchmarks for Mono-Forward Scheduled Local Updates in Small Byte-Level Decoders
+# Paper Outline
+
+Suggested title:
+
+**Mono-Forward Scheduled Updates for Consumer-GPU Smoke Training of Small Decoder Models**
 
 ## Abstract
 
-We report consumer-GPU smoke benchmarks for mono-forward scheduled local updates in small byte-level decoder language models. Experiments run on an NVIDIA GeForce RTX 5070 Ti Laptop GPU using Tiny Shakespeare with byte vocabulary size 256 and hidden size 128. Mono-forward scheduled updates substantially improve tokens/sec in short runs: dense24 mono is 4.58x faster than dense24 chain-rule, and sparse4/24 mono is 17.63x faster than dense24 chain-rule. However, regular chain-rule training reaches lower validation cross entropy in these short runs, sparse active compute is faster but not equivalent to dense depth, and sparse4/24 does not outperform a normal dense4 model at matched active parameters. A simple recurrent mixer labeled `simple_gdn` runs stably and slightly improves mono validation CE, but is slower and higher-memory than softmax here. These results are smoke benchmarks, not claims of LLM-scale quality or official Gated DeltaNet performance.
+- Consumer laptop GPU.
+- Mono-forward as a training rule, not a new architecture.
+- Tiny Shakespeare byte-level throughput gains.
+- Chain-rule still better short-run CE in early comparisons.
+- Python-token practical smoke runs.
+- Dense24 optimized MBPP smoke run under 4GB peak CUDA memory.
+- No coding benchmark score, no pass@1, no LLM-scale claim.
 
 ## Introduction
 
-- Small-scale CUDA/PyTorch reproduction environment for mono-forward scheduled update experiments.
-- Motivation for measuring practical throughput on consumer GPUs.
-- Need to separate throughput claims from quality and active-parameter accounting.
+- Motivation for small, reproducible CUDA/PyTorch smoke benchmarks.
+- Need to separate throughput, quality, active compute, and update count.
 
-## Motivation
+## Background / Motivation
 
-- Full chain-rule backprop is expensive.
-- Scheduled local updates can reduce backward/update frequency.
-- Sparse active compute can improve throughput, but must be compared to matched active-parameter baselines.
+- Cost of full chain-rule backprop.
+- Scheduled local/mono updates as a throughput-oriented training rule.
+- Why consumer-GPU smoke tests are useful but limited.
 
-## Methods
+## Method: Mono-Forward Scheduled Updates
 
-- Decoder-only byte-level model.
-- Learned token and position embeddings.
-- RMSNorm, causal mixer, MLP, LM head.
-- Hidden size 128, sequence length 256, vocab size 256.
-- Tiny Shakespeare 90/10 train/validation split.
-
-## Training Rules
-
-- `fp_chainrule`: full final-CE backprop every step.
-- `fp_mono_update_every_N`: scheduled mono-forward/local update rule.
-- Optimizer update counts are reported and not treated as equal unless explicitly matched.
-
-## Dense vs Sparse Active Compute
-
-- dense24: 24 active blocks, 4,851,072 active params.
-- sparse4/24: logical 24-layer scaffold, 4 active blocks, 890,752 active params.
-- dense4: normal 4-layer model, 890,752 active params.
-- Sparse4/24 must not be called dense24 training.
-
-## Softmax vs Simple Recurrent Mixer
-
-- `softmax`: normal causal softmax attention.
-- `simple_gdn`: simple causal recurrent/linear mixer.
-- `official_gdn=false`.
-- Stable first, not optimized, not official Gated DeltaNet.
+- `fp_chainrule`.
+- `fp_mono_update_every_N`.
+- Optimizer update accounting.
+- Non-update no-grad optimization for dense24 mono.
 
 ## Experimental Setup
 
-- GPU: NVIDIA GeForce RTX 5070 Ti Laptop GPU.
-- Dataset: Tiny Shakespeare, byte-level, vocab 256.
-- Runs: 500 training steps, validation every 100 steps.
-- Training batches preloaded on CUDA.
-- Throughput excludes validation and data loading.
+- Hardware: NVIDIA GeForce RTX 5070 Ti Laptop GPU.
+- Software: PyTorch 2.11.0+cu128, CUDA 12.8.
+- Datasets:
+  - Tiny Shakespeare byte-level.
+  - Local Python-code BPE corpus.
+  - MBPP sanitized smoke-training corpus.
+- Timing rules and FLOP estimate caveat.
 
-## Results
+## Tiny Shakespeare Byte-Level Experiments
 
-- Chain-rule vs mono 24-layer results.
-- Dense4 vs sparse4/24 reviewer baseline.
-- Softmax vs simple_gdn 4-active comparison.
-- FLOPs/token reported as parameter-count estimates.
+- Chain-rule vs mono 24-layer.
+- Dense4 vs sparse4/24.
+- Softmax vs `simple_gdn`.
+
+## Regular PyTorch Baseline Audit
+
+- Plain PyTorch 4-layer Transformer-style chain-rule baseline.
+- Comparison to SamatNext dense4 chain-rule and mono.
+
+## Practical Python-Token Smoke Experiment
+
+- Hidden 512, seq 1024, vocab 16,000.
+- Regular PyTorch vs SamatNext dense4/sparse4 mono.
+- Larger setup lowers extreme byte-level tok/s.
+
+## BF16 Softmax vs Simple GDN
+
+- BF16 support.
+- `simple_gdn` stable but slower, higher-memory, and not better CE.
+- No official Gated DeltaNet claim.
+
+## Dense24 VRAM Optimization
+
+- Dense 24/24 softmax mono.
+- Hidden 512, seq 512, batch 8.
+- Non-update no-grad optimization.
+- Memory reduction from 7.459 GB to 4.641 GB.
+
+## MBPP Dense24 500-Step Smoke Training
+
+- Sanitized MBPP as text-only smoke corpus.
+- 81.1M params, 500 FP16 steps, 83.6K tok/s, 3.992GB peak CUDA memory.
+- Validation CE 8.7202 to 3.9844.
+- No test execution, no pass@1, no coding ability claim.
+
+## Discussion
+
+- Throughput and memory claims.
+- Quality caveats.
+- Why sparse4/24 did not show depth benefit.
+- Why `simple_gdn` work stops for this milestone.
 
 ## Limitations
 
-- Small byte-level smoke benchmark only.
-- Not LLM-scale.
-- No claim of beating Transformers at scale.
-- No official Gated DeltaNet.
-- No real 1.58-bit speedup claim.
-- FLOPs are estimates, not hardware counters.
-- Short 500-step runs may not reflect long-run quality.
+- Small corpora.
+- Short runs.
+- MBPP repeated exposure.
+- No coding benchmark score.
+- No long-run convergence.
+- No LLM-scale claim.
+
+## Reproducibility
+
+- Commands.
+- Config files.
+- Generated data paths.
+- Hardware/software versions.
 
 ## Future Work
 
-- Longer equal-update and equal-token experiments.
-- Better local loss accounting.
-- More faithful delta-rule mixer.
-- Optimized scan/fused recurrent kernels.
-- Larger datasets and model sizes after methodology is stable.
+- Longer runs.
+- Matched chain-rule MBPP comparison.
+- More careful local loss accounting.
+- Better recurrent mixers only after a faithful implementation exists.
+- Kernel optimization as a separate milestone.
 
-## Reproducibility Checklist
+## Citation Placeholders
 
-- Code release includes configs.
-- Tests pass with `python -m pytest -q`.
-- Dataset path documented.
-- Hardware documented.
-- Seeds and validation checkpoints fixed in configs.
-- Negative results reported.
+- TODO: cite MBPP / Google Research.
+- TODO: cite PyTorch.
+- TODO: cite Tiny Shakespeare if needed.

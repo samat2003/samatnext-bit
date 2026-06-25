@@ -1,7 +1,8 @@
 # Reproducibility Checklist
 
 - Repository: `https://github.com/samat2003/samatnext-bit`
-- Branch: `master`
+- Frozen release branch/tag: `mono-forward-smoke-v1`
+- ArXiv draft integration branch: `arxiv-paper-docs-mbpp-integration`
 - Base release commit: `ecdd51c`
 - Release tag: `mono-forward-smoke-v1`
 - GPU: NVIDIA GeForce RTX 5070 Ti Laptop GPU
@@ -33,3 +34,33 @@ python -m samatnext_bit.bench_speed --config configs/softmax_vs_gdn_4active.yaml
 - Throughput can vary with GPU model, driver version, thermals, power settings, and background load.
 - FLOPs are parameter-count estimates, not hardware counters.
 - Negative results are reported, including chain-rule quality advantages, sparse4/24 matching dense4, and `simple_gdn` being slower/higher-memory than softmax.
+
+## Supplemental Smoke Runs
+
+- Local Python-code corpus builder:
+
+```bash
+python scripts/build_python_code_corpus.py
+```
+
+- MBPP smoke corpus builder:
+
+```bash
+python scripts/build_mbpp_smoke_corpus.py
+```
+
+- MBPP generated paths:
+  - `data/mbpp_smoke/train.txt`
+  - `data/mbpp_smoke/val.txt`
+  - `data/mbpp_smoke/metadata.json`
+  - `data/mbpp_smoke/tokenizer.json`
+
+- MBPP smoke command:
+
+```bash
+python -m samatnext_bit.bench_speed --config configs/dense24_mono_optimized_mbpp_500step.yaml
+```
+
+- MBPP result commit: `8ecd6ab`
+- MBPP source: `google-research-datasets/mbpp`, sanitized
+- MBPP run interpretation: smoke training only; no tests executed and no pass@1 reported.

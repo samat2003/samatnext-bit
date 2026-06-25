@@ -1,64 +1,32 @@
-# Consumer-GPU Smoke Benchmarks for Mono-Forward Scheduled Local Updates in Small Byte-Level Decoders
+# Mono-Forward Scheduled Updates for Consumer-GPU Smoke Training of Small Decoder Models
 
 ## Abstract
 
-We report consumer-GPU smoke benchmarks for mono-forward scheduled local updates in small byte-level decoder language models. Experiments run on an NVIDIA GeForce RTX 5070 Ti Laptop GPU using Tiny Shakespeare, byte vocabulary size 256, sequence length 256, and hidden size 128. Mono-forward scheduled updates substantially improve training throughput in short runs: dense24 mono reaches 4.58x the tokens/sec of dense24 chain-rule, and sparse4/24 mono reaches 17.63x the tokens/sec of dense24 chain-rule. However, regular chain-rule training reaches lower short-run validation cross entropy. The sparse4/24 setting uses only 4 active/instantiated blocks and does not outperform a normal dense4 model at matched active parameter count. A simple recurrent mixer labeled `simple_gdn` runs stably and slightly improves mono validation CE, but is slower and higher-memory than softmax attention in this implementation. These are small byte-level smoke benchmarks on a consumer laptop GPU; we make no LLM-scale claim, no claim of beating Transformers at scale, and no claim that `simple_gdn` is official Gated DeltaNet.
+We report smoke benchmarks for mono-forward scheduled updates in small decoder models on an NVIDIA GeForce RTX 5070 Ti Laptop GPU. Mono-forward is evaluated as a training rule rather than a new architecture: it performs forward passes every step while scheduling optimizer updates every `N` steps. On Tiny Shakespeare byte-level runs, dense24 mono-forward reached 4.58x the tokens/sec of dense24 chain-rule training, while chain-rule reached lower short-run validation cross entropy. Sparse active compute was faster but did not outperform a matched dense4 baseline. On a supplemental sanitized MBPP corpus used only as a training smoke corpus, an optimized dense24 mono-forward model trained for 500 FP16 steps with 81.1M parameters, 83.6K tokens/sec, and 3.992GB peak CUDA memory; validation CE decreased from 8.7202 to 3.9844. This MBPP run does not execute tests and is not a pass@1 or coding-ability result. The experiments are consumer-GPU smoke benchmarks for small decoders, not LLM-scale claims and not claims of beating Transformers at scale.
 
 ## 1. Introduction
 
-This technical report documents a reproducible milestone for `samatnext-bit`, a CUDA/PyTorch research sandbox for mono-forward scheduled local updates. The goal is narrow: measure short-run throughput and validation behavior on a consumer GPU using a small byte-level decoder.
+This technical report documents the `samatnext-bit` mono-forward scheduled-update milestone. The goal is narrow: measure throughput, memory, and validation-loss behavior for small decoder training runs on a consumer laptop GPU.
 
-The report emphasizes accounting. Throughput improvements from scheduled updates are useful only when update counts, active parameter counts, and model structure are reported clearly. In particular, sparse4/24 is a logical 24-layer scaffold with only 4 active/instantiated blocks; it is not dense24 training.
+The report emphasizes accounting. Scheduled updates change optimizer update counts. Sparse active compute changes the number of active parameters. Generated Python-code samples are not coding benchmark results. These distinctions are kept explicit throughout the results.
 
-## 2. Motivation
+## 2. Background / Motivation
 
-Full chain-rule backpropagation through all active layers is expensive. A scheduled local-update rule can reduce backward/update frequency and improve measured training throughput. The open question for this milestone is whether those throughput gains come with acceptable short-run validation behavior, and whether sparse logical depth or a simple recurrent mixer improves the 4-active-block regime.
+Full chain-rule backpropagation through all active layers is expensive. A scheduled mono-forward rule can reduce backward/update frequency and avoid unnecessary autograd work on non-update steps. The practical question is whether this improves throughput and memory enough to be useful in small consumer-GPU training smoke tests, while keeping loss finite and validation CE decreasing.
 
-## 3. Methods
+## 3. Method: Mono-Forward Scheduled Updates
 
-The model is a decoder-only byte-level language model with:
+The baseline training rule is:
 
-- byte vocabulary size 256
-- learned token embeddings
-- learned position embeddings
-- RMSNorm
-- causal mixer blocks
-- MLP blocks
-- final language-model head
+- `fp_chainrule`: regular final-cross-entropy backprop every step.
 
-The release experiments use hidden size 128, sequence length 256, and 4 attention heads. This is a small decoder used for smoke benchmarking, not a production LLM.
+The mono-forward training rule is:
 
-## 4. Training Rules
+- `fp_mono_update_every_N`: forward every step, perform optimizer update every `N` steps.
 
-`fp_chainrule` performs regular full backpropagation from final cross entropy every step.
+The dense24 VRAM-optimized implementation adds one runtime optimization: non-update mono-forward steps run under `torch.no_grad()`. Update steps still build the normal autograd graph and call `loss.backward()`. This does not change the model architecture, active layer count, mixer, dataset, or update schedule.
 
-`fp_mono_update_every_N` performs the mono-forward scheduled local update rule. It runs forward every step and performs optimizer updates every `N` steps. Because update counts differ, comparisons must report both tokens/sec and optimizer updates.
-
-## 5. Dense vs Sparse Active Compute
-
-The release uses three model accounting regimes:
-
-| name | description | active params |
-|---|---|---:|
-| dense24 | 24 active blocks out of 24 | 4,851,072 |
-| sparse4/24 | logical 24-layer scaffold with 4 active/instantiated blocks | 890,752 |
-| dense4 | normal 4-layer model | 890,752 |
-
-The dense4 baseline is important: it tests whether sparse4/24 provides any quality benefit beyond simply training a normal 4-layer model at the same active parameter count.
-
-## 6. Softmax vs Simple Recurrent Mixer
-
-`softmax` is normal causal softmax attention.
-
-`simple_gdn` is a simple causal recurrent/linear mixer implemented for this smoke benchmark. It is explicitly not official Gated DeltaNet:
-
-- `mixer_type=simple_gdn`
-- `official_gdn=false`
-- `linear_recurrent_mixer=true`
-
-The implementation is stability-first and not optimized.
-
-## 7. Experimental Setup
+## 4. Experimental Setup
 
 Hardware and software:
 
@@ -69,27 +37,30 @@ Hardware and software:
 - CUDA: 12.8
 - Triton: 3.6.0
 
-Dataset:
+Timing:
 
-- Tiny Shakespeare
-- path: `data/english_validation.txt`
-- bytes loaded: 1,115,394
-- train/validation split: 90/10
-- vocab size: 256
+- Training batches are preloaded on CUDA for reported benchmark loops.
+- Validation is outside measured tok/s timing.
+- Tokenizer training and tokenization are outside measured tok/s timing.
+- FLOPs/token are parameter-count estimates, not hardware counters.
 
-Benchmark settings:
+Datasets:
 
-- 500 training steps
-- validation every 100 steps
-- fixed validation batches
-- preloaded CUDA training batches
-- measured training speed excludes validation, token loading, and batch sampling
+- Tiny Shakespeare byte-level text, vocab 256.
+- Local Python-code BPE smoke corpus, vocab 16,000 in the recorded practical run.
+- Sanitized MBPP text corpus from `google-research-datasets/mbpp`, used only as a training smoke corpus.
 
-FLOPs/token are simple parameter-count estimates, not hardware counters.
+TODO: cite MBPP / Google Research.
 
-## 8. Results
+TODO: cite PyTorch.
 
-### 8.1 Chain-Rule vs Mono 24-Layer
+TODO: cite Tiny Shakespeare if needed.
+
+## 5. Tiny Shakespeare Byte-Level Experiments
+
+The original frozen release uses hidden size 128, sequence length 256, byte vocabulary size 256, and 500-step runs.
+
+### 5.1 Chain-Rule vs Mono 24-Layer
 
 | track | rule | active blocks | active params | updates | tok/s | final val CE |
 |---|---|---:|---:|---:|---:|---:|
@@ -98,9 +69,9 @@ FLOPs/token are simple parameter-count estimates, not hardware counters.
 | sparse4_24_chainrule | chainrule | 4/24 | 890,752 | 500 | 617,245 | 2.4463 |
 | sparse4_24_mono | mono update every 8 | 4/24 | 890,752 | 63 | 2,556,872 | 3.0240 |
 
-Dense24 mono improves throughput by 4.58x over dense24 chain-rule, but dense24 chain-rule reaches lower validation CE in the short run. Sparse4/24 mono improves throughput by 17.63x versus dense24 chain-rule, but it uses only 4 active blocks.
+Dense24 mono-forward improved throughput by 4.58x over dense24 chain-rule. Dense24 chain-rule reached lower validation CE.
 
-### 8.2 Dense4 vs Sparse4/24
+### 5.2 Dense4 vs Sparse4/24
 
 | track | rule | active blocks | active params | updates | tok/s | final val CE |
 |---|---|---:|---:|---:|---:|---:|
@@ -109,9 +80,11 @@ Dense24 mono improves throughput by 4.58x over dense24 chain-rule, but dense24 c
 | sparse4_24_chainrule | chainrule | 4/24 | 890,752 | 500 | 633,070 | 2.4463 |
 | sparse4_24_mono | mono update every 8 | 4/24 | 890,752 | 63 | 2,465,589 | 3.0240 |
 
-Sparse4/24 matches the dense4 validation CE in this benchmark but does not beat it. This negative result matters: the logical 24-layer scaffold has not yet shown extra quality beyond 4 active blocks.
+Sparse4/24 matched dense4 validation CE but did not beat it. The logical 24-layer scaffold has not shown quality benefit beyond 4 active blocks in this setup.
 
-### 8.3 Softmax vs `simple_gdn` 4-Active
+### 5.3 Softmax vs Simple Recurrent Mixer
+
+`simple_gdn` is not official Gated DeltaNet. It is a simple recurrent/linear mixer labeled `official_gdn=false`.
 
 | track | mixer | rule | tok/s | final val CE | peak GB |
 |---|---|---|---:|---:|---:|
@@ -119,54 +92,120 @@ Sparse4/24 matches the dense4 validation CE in this benchmark but does not beat 
 | dense4_gdn_chainrule | simple_gdn | chainrule | 580,433 | 2.4878 | 1.379 |
 | dense4_softmax_mono | softmax | mono | 2,492,863 | 3.0240 | 1.022 |
 | dense4_gdn_mono | simple_gdn | mono | 2,095,307 | 3.0128 | 1.389 |
-| sparse4_24_softmax_chainrule | softmax | chainrule | 642,413 | 2.4463 | 1.012 |
-| sparse4_24_gdn_chainrule | simple_gdn | chainrule | 549,344 | 2.4878 | 1.379 |
-| sparse4_24_softmax_mono | softmax | mono | 2,596,091 | 3.0240 | 1.022 |
-| sparse4_24_gdn_mono | simple_gdn | mono | 2,097,410 | 3.0128 | 1.389 |
 
-`simple_gdn` runs stably with finite gradients. It slightly improves mono validation CE but is slower and higher-memory than softmax. It does not improve chain-rule validation CE.
+`simple_gdn` was stable and slightly improved mono CE in the Tiny Shakespeare run, but it was slower and higher-memory than softmax.
 
-## 9. Discussion
+## 6. Regular PyTorch Baseline Audit
 
-The strongest result is a throughput result, not a quality result. Scheduled mono-forward updates substantially increase measured tokens/sec in these small byte-level smoke runs. The result is practically interesting because it appears on a consumer laptop GPU without custom kernels.
+A plain PyTorch CUDA 4-layer Transformer-style chain-rule loop was added to test whether the 4-layer speed came from a custom SamatNext path.
 
-The quality picture is more conservative. Chain-rule reaches lower validation CE in the dense24 short run, and sparse4/24 does not beat dense4 at matched active parameter count. This suggests that the current sparse logical scaffold behaves like a normal 4-active-block model, not like a 24-layer dense model.
+| track | family | rule | tok/s | final val CE | peak GB |
+|---|---|---|---:|---:|---:|
+| regular_torch_4layer_python_chainrule | regular PyTorch | chainrule | 126,948 | 6.4704 | 10.353 |
+| samatnext_dense4_python_chainrule | SamatNext | chainrule | 142,473 | 6.4563 | 11.258 |
+| samatnext_dense4_python_mono | SamatNext | mono | 361,192 | 7.9963 | 11.618 |
 
-The simple recurrent mixer result is also mixed. Stability is useful, but the current implementation is slower and uses more memory than softmax attention. Any future claim about recurrent mixers should wait for a more faithful and optimized implementation.
+The regular PyTorch baseline was also fast for this small 4-layer hidden-512 setup. Mono-forward improved throughput but reached worse CE after 100 steps.
 
-## 10. Limitations
+## 7. Practical Python-Token Smoke Experiment
 
-- Tiny Shakespeare byte-level validation is a smoke benchmark.
-- The decoder is small: hidden size 128, byte vocabulary 256.
-- Runs are short: 500 training steps.
-- FLOPs are estimated from parameter counts, not measured hardware counters.
-- Throughput may vary with GPU, drivers, thermals, power settings, and background load.
-- Sparse4/24 is not dense24 training.
-- `simple_gdn` is not official Gated DeltaNet.
-- No real 1.58-bit speedup is claimed in this report.
-- No claim is made that these results beat Transformers at scale.
-- No LLM-scale quality claim is made.
+The practical Python-code smoke run used hidden 512, heads 8, sequence length 1024, batch 24, and a byte-level BPE vocabulary of 16,000.
 
-## 11. Future Work
+| track | rule | tok/s | final val CE | peak GB |
+|---|---|---:|---:|---:|
+| regular_torch_4layer_python_chainrule | chainrule | 126,948 | 6.4704 | 10.353 |
+| samatnext_dense4_python_chainrule | chainrule | 142,473 | 6.4563 | 11.258 |
+| samatnext_dense4_python_mono | mono | 361,192 | 7.9963 | 11.618 |
+| samatnext_sparse4_24_python_mono | mono | 362,131 | 7.9963 | 11.618 |
 
-- Longer equal-token and equal-update runs.
-- More careful local-update accounting.
-- A more faithful delta-rule recurrent mixer.
-- Optimized CUDA/Triton scan or fused recurrence kernels.
-- Larger datasets and model widths after the small-scale methodology is stable.
+Larger hidden size, vocabulary, and sequence length reduced the extreme tok/s values observed in byte-level hidden-128 runs.
 
-## 12. Reproducibility Checklist
+## 8. BF16 Softmax vs Simple GDN
 
-- Repository: `https://github.com/samat2003/samatnext-bit`
-- Release tag: `mono-forward-smoke-v1`
-- Base release commit: `ecdd51c`
-- Tests: `python -m pytest -q`
-- Benchmark configs:
-  - `configs/chainrule_vs_mono_24layer.yaml`
-  - `configs/dense4_vs_sparse4_24.yaml`
-  - `configs/softmax_vs_gdn_4active.yaml`
-- Dataset path: `data/english_validation.txt`
-- Vocab size: 256
-- GPU: NVIDIA GeForce RTX 5070 Ti Laptop GPU
-- Environment: Python 3.12.3, PyTorch 2.11.0+cu128, CUDA 12.8, Triton 3.6.0
-- Negative results are included in the tables.
+The BF16 mixer comparison used hidden 512, sequence length 1024, batch 24, and the Python-code BPE setup.
+
+| track | mixer | rule | tok/s | final val CE | peak GB |
+|---|---|---|---:|---:|---:|
+| dense4_softmax_bf16_chainrule | softmax | chainrule | 137,322 | 5.4315 | 11.260 |
+| dense4_gdn_bf16_chainrule | simple_gdn | chainrule | 61,406 | 5.4542 | 13.466 |
+| dense4_softmax_bf16_mono | softmax | mono | 379,367 | 7.2706 | 11.621 |
+| dense4_gdn_bf16_mono | simple_gdn | mono | 79,852 | 7.2734 | 13.828 |
+
+`simple_gdn` was stable but slower, higher-memory, and not better CE than softmax. GDN work is therefore stopped for this milestone.
+
+## 9. Dense24 VRAM Optimization
+
+The dense24 VRAM optimization used dense 24/24 softmax, hidden 512, heads 8, sequence length 512, batch 8, and FP16 mixed precision.
+
+| track | optimized | params | tok/s | final val CE | peak GB |
+|---|---:|---:|---:|---:|---:|
+| dense24_softmax_mono_as_is | false | 92,295,296 | 82,909 | 7.8292 | 7.459 |
+| dense24_softmax_mono_optimized | true | 92,295,296 | 83,587 | 7.8292 | 4.641 |
+
+The optimization reduced memory by avoiding autograd graph construction on non-update mono steps. The main gain was VRAM headroom rather than speed.
+
+## 10. MBPP Dense24 500-Step Smoke Training
+
+On the sanitized MBPP corpus used only as a training smoke corpus, the optimized dense24 mono-forward model trained for 500 FP16 steps with 81.1M parameters, 83.6K tokens/sec, and 3.992GB peak CUDA memory. Validation CE decreased from 8.7202 to 3.9844. Because the corpus contains only 384 training examples and 62,595 train tokens, this result should be interpreted as a stability and efficiency smoke test rather than evidence of coding ability.
+
+| field | value |
+|---|---:|
+| Dataset | `google-research-datasets/mbpp`, sanitized |
+| Examples | 427 total, 384 train, 43 validation |
+| Train/val tokens | 62,595 / 7,025 |
+| Tokenizer | byte-level BPE, vocab 5,037 |
+| Model | dense 24/24 softmax mono, hidden 512, heads 8 |
+| Batch/seq | 8 / 512 |
+| Steps/updates | 500 / 63 |
+| Params | 81,058,221 |
+| Peak CUDA memory | 3.992 GB |
+| Tok/s | 83,613 |
+| Initial val CE | 8.7202 |
+| Final val CE | 3.9844 |
+| Final val PPL | 53.7520 |
+| Gradients finite | true |
+| NaN/Inf | false |
+
+No MBPP tests were executed. No pass@1 is reported. Generated samples remained noisy and invalid-looking.
+
+## 11. Discussion
+
+The strongest result is now a practical memory and throughput result: optimized dense24 mono-forward can run an 81M-parameter dense softmax decoder smoke-training loop under 4GB peak CUDA memory on a consumer laptop GPU. The validation CE decreases on the tiny MBPP text corpus, which supports stability of the training path.
+
+The quality results remain conservative. Earlier controlled comparisons show chain-rule reaching better validation CE at equal step count. Sparse4/24 did not outperform dense4 at matched active parameters. `simple_gdn` did not outperform softmax in the practical BF16 Python-token comparison.
+
+## 12. Limitations
+
+- All experiments are smoke benchmarks.
+- MBPP sanitized is tiny: 384 train examples and 62,595 train tokens.
+- The 500-step MBPP run repeats a very small corpus.
+- No MBPP tests are executed.
+- No pass@1 or coding ability claim is made.
+- Generated samples are noisy.
+- No long-run convergence claim is made.
+- No comparison against a trained standard Transformer on the same MBPP corpus for 500 steps is included.
+- FLOPs are estimates, not hardware counters.
+- No real 1.58-bit/base3 speedup is claimed.
+- No result proves LLM-scale behavior or beats Transformers at scale.
+
+## 13. Reproducibility
+
+Core commands:
+
+```bash
+python -m pytest -q
+python scripts/build_python_code_corpus.py
+python scripts/build_mbpp_smoke_corpus.py
+python -m samatnext_bit.bench_speed --config configs/dense24_mono_optimized_mbpp_500step.yaml
+```
+
+The full command list is in `REPRODUCIBILITY.md`.
+
+## 14. Future Work
+
+- Longer controlled runs.
+- A chain-rule MBPP text smoke baseline with matched model size and steps.
+- Better local-update accounting.
+- Larger corpora after the small methodology is stable.
+- Kernel optimization as a separate milestone.
+- A faithful recurrent/delta mixer only if implemented and labeled accurately.

@@ -2,6 +2,8 @@
 
 This release freezes the mono-forward smoke benchmark milestone for `samatnext-bit`.
 
+This tag remains frozen. Later arXiv-draft documentation integrates supplemental audits and smoke runs, but does not modify `mono-forward-smoke-v1`.
+
 ## What Is Included
 
 - CUDA/PyTorch benchmark code for small byte-level decoder smoke tests.
