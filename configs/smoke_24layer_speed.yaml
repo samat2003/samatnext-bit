@@ -1,0 +1,60 @@
+name: smoke_24layer_speed
+hidden: 128
+heads: 4
+layers: 24
+steps: 50
+warmup_steps: 10
+lr: 0.0003
+weight_decay: 0.01
+amp: true
+amp_dtype: bfloat16
+torch_compile: false
+cuda_graph: false
+seed: 0
+runs:
+  - candidate: A
+    layers: 24
+    active_layers: 4
+    recurrent_passes: 1
+    mode: fp_mono_update_every_8
+    batch: 64
+    seq: 256
+  - candidate: B
+    layers: 24
+    active_layers: 24
+    recurrent_passes: 1
+    mode: fp_mono_update_every_16
+    batch: 64
+    seq: 256
+  - candidate: C
+    layers: 24
+    active_layers: 24
+    recurrent_passes: 1
+    mode: fp_mono_update_every_16
+    batch: 80
+    seq: 256
+    stop_if_dense_reaches_1m: true
+  - candidate: C
+    layers: 24
+    active_layers: 24
+    recurrent_passes: 1
+    mode: fp_mono_update_every_16
+    batch: 96
+    seq: 256
+    stop_if_dense_reaches_1m: true
+  - candidate: C
+    layers: 24
+    active_layers: 24
+    recurrent_passes: 1
+    mode: fp_mono_update_every_16
+    batch: 64
+    seq: 384
+    stop_if_dense_reaches_1m: true
+  - candidate: C
+    layers: 24
+    active_layers: 24
+    recurrent_passes: 1
+    mode: fp_mono_update_every_16
+    batch: 80
+    seq: 384
+    stop_if_dense_reaches_1m: true

@@ -1,0 +1,58 @@
+name: speed_1m_24layer
+hidden: 128
+heads: 4
+layers: 24
+steps: 12
+warmup_steps: 4
+lr: 0.0003
+weight_decay: 0.01
+amp: true
+amp_dtype: bfloat16
+torch_compile: false
+cuda_graph: false
+seed: 0
+modes:
+  - fp_mono_update_every_8
+  - fp_mono_update_every_16
+  - fake_ternary_mono_update_every_8
+  - fake_ternary_mono_update_every_16
+experiments:
+  - name: dense_24_baseline
+    layers: 24
+    active_layers: 24
+    recurrent_passes: 1
+  - name: sparse_24_active4
+    layers: 24
+    active_layers: 4
+    recurrent_passes: 1
+  - name: sparse_24_active4_recurrent2
+    layers: 24
+    active_layers: 4
+    recurrent_passes: 2
+batch_seq_pairs:
+  - batch: 64
+    seq: 256
+  - batch: 80
+    seq: 256
+  - batch: 96
+    seq: 256
+  - batch: 112
+    seq: 256
+  - batch: 128
+    seq: 256
+  - batch: 64
+    seq: 384
+  - batch: 80
+    seq: 384
+  - batch: 96
+    seq: 384
+  - batch: 64
+    seq: 512
+  - batch: 80
+    seq: 512
+  - batch: 96
+    seq: 512
+  - batch: 128
+    seq: 384
+  - batch: 128
+    seq: 512

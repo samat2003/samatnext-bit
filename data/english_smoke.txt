@@ -1,0 +1,13 @@
+The small model was trained on short passages of ordinary English text. The goal of this smoke test is not to produce a polished language model, but to verify that the training loop behaves correctly on real text rather than on repeated synthetic patterns.
+
+A useful benchmark should say exactly what it measures. It should count only tokens that pass through the model, time only the training step, and report when optimizer updates are actually performed. If data has already been loaded onto the accelerator, the report should say so clearly.
+
+In a production system, a language model sees many kinds of writing: documentation, source comments, bug reports, design notes, emails, and narrative prose. A byte-level tokenizer keeps the experiment simple because every character can be represented by an integer from zero to two hundred fifty five. This also avoids adding a separate tokenizer dependency to a speed benchmark.
+
+The dense configuration computes every layer on every token. The sparse logical configuration keeps a larger logical depth in the report but computes only the active layers. These two claims must stay separate. A sparse model can be very fast, but it is not the same claim as dense twenty four layer training.
+
+When the loss decreases over a few dozen updates, the run is not a quality result. It is only a sanity check that gradients are finite, optimizer steps are occurring, and the model can fit a tiny stream of English bytes. A longer run on a larger corpus would be needed before making claims about language modeling quality.
+
+The benchmark records cross entropy, perplexity, gradient norms, memory usage, and step time distribution. The high percentile step times are useful because occasional update spikes can hide behind a good median. If the mean is too slow for the target throughput, the next optimization should focus on reducing those spikes and overheads instead of only improving the fastest no-update step.
+
+This local fallback text is intentionally plain. It contains normal sentences, punctuation, repeated terminology, and paragraph structure. It is enough for a smoke test to distinguish English byte training from a counting or pattern dataset.

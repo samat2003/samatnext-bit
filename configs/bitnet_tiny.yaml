@@ -1,0 +1,12 @@
+name: bitnet_tiny
+dataset: tiny_code
+vocab_size: 256
+hidden: 128
+layers: 4
+heads: 4
+batch_size: 8
+seq_len: 128
+steps: 300
+lr: 0.0003
+weight_decay: 0.01
+seed: 0

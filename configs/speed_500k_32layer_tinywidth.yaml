@@ -1,0 +1,24 @@
+name: speed_500k_32layer_tinywidth
+layers: 32
+hidden: 128
+heads: 4
+seq_sweep: [128, 256, 512]
+batch_sweep: [8, 16, 32, 64]
+steps: 12
+warmup_steps: 4
+lr: 0.0003
+weight_decay: 0.01
+amp: true
+amp_dtype: bfloat16
+torch_compile: false
+cuda_graph: false
+seed: 0
+modes:
+  - fp_mono_update_every_2
+  - fp_mono_update_every_4
+  - fp_mono_update_every_8
+  - fake_ternary_mono_update_every_2
+  - fake_ternary_mono_update_every_4
+  - fake_ternary_mono_update_every_8
+  - base3_tile_dot_ternary_mono_update_every_2
+  - base3_tile_dot_ternary_mono_update_every_4
