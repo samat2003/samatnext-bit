@@ -298,6 +298,47 @@ def eval_ce(model: DecoderLM, batches: list[tuple[torch.Tensor, torch.Tensor]], 
     return statistics.mean(losses)
 
 
+def scaler_value(scaler: torch.amp.GradScaler) -> float | None:
+    return float(scaler.get_scale()) if scaler.is_enabled() else None
+
+
+def step_with_amp_scaler(
+    scaler: torch.amp.GradScaler,
+    opt: torch.optim.Optimizer,
+    step: int,
+    scaler_history: list[dict[str, Any]],
+) -> bool:
+    before = scaler_value(scaler)
+    scaler.step(opt)
+    scaler.update()
+    after = scaler_value(scaler)
+    skipped = bool(before is not None and after is not None and after < before)
+    if before is not None or after is not None:
+        scaler_history.append({
+            "step": step,
+            "scale_before": before,
+            "scale_after": after,
+            "skipped_optimizer_step": skipped,
+        })
+    return not skipped
+
+
+def compact_scaler_history(history: list[dict[str, Any]], interval: int) -> list[dict[str, Any]]:
+    if not history:
+        return []
+    checkpoints: list[dict[str, Any]] = []
+    seen_steps: set[int] = set()
+    last_idx = len(history) - 1
+    for idx, item in enumerate(history):
+        step = int(item["step"])
+        include = idx < 3 or idx == last_idx or bool(item.get("skipped_optimizer_step"))
+        include = include or (step > 0 and interval > 0 and step % interval == 0)
+        if include and step not in seen_steps:
+            checkpoints.append(item)
+            seen_steps.add(step)
+    return checkpoints
+
+
 @torch.no_grad()
 def generate_samples(model: DecoderLM, tokenizer: Any, dev: torch.device, prompts: list[str], max_new_tokens: int) -> dict[str, str]:
     model.eval()
@@ -382,6 +423,11 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
     initial_train_ce = float(initial_train_loss.item())
     initial_val_ce = eval_ce(model, val_batches, precision["autocast_dtype"], bool(precision["amp_enabled"] or precision["precision_mode"] == "fp16_manual"))
 
+    scaler_history: list[dict[str, Any]] = []
+    warmup_optimizer_step_attempts = 0
+    warmup_optimizer_updates = 0
+    warmup_skipped_optimizer_steps = 0
+    warmup_grad_nonfinite_steps: list[int] = []
     for warmup in range(int(cfg.get("warmup_timed_steps", 3))):
         x, y = train_batches[warmup]
         with maybe_autocast(dev, precision):
@@ -392,8 +438,13 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
             scaler.unscale_(opt)
         if grad_clip is not None:
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-        scaler.step(opt)
-        scaler.update()
+        _, finite = grad_norm_and_finite(model)
+        if not finite:
+            warmup_grad_nonfinite_steps.append(warmup)
+        warmup_optimizer_step_attempts += 1
+        applied = step_with_amp_scaler(scaler, opt, -int(cfg.get("warmup_timed_steps", 3)) + warmup, scaler_history)
+        warmup_optimizer_updates += int(applied)
+        warmup_skipped_optimizer_steps += int(not applied)
 
     sync(dev)
     reset_peak_memory(dev)
@@ -402,10 +453,13 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
     grad_norms: list[float] = []
     gradients_finite = True
     loss_finite = True
+    optimizer_step_attempts = 0
     optimizer_updates = 0
+    skipped_optimizer_steps = 0
     anchor_updates = 0
     skipped_anchor_collisions = 0
     normal_mono_updates = 0
+    grad_nonfinite_steps: list[int] = []
     timed_start = time.perf_counter()
     actual_steps = 0
     validation_interval = int(cfg.get("validation_interval_steps", 0) or 0)
@@ -429,11 +483,14 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
             norm, finite = grad_norm_and_finite(model)
             grad_norms.append(norm)
             gradients_finite = gradients_finite and finite
-            scaler.step(opt)
-            scaler.update()
-            optimizer_updates += 1
-            anchor_updates += int(anchor_update)
-            normal_mono_updates += int(normal_update and spec["training_rule"] != "chainrule")
+            if not finite:
+                grad_nonfinite_steps.append(step)
+            optimizer_step_attempts += 1
+            applied = step_with_amp_scaler(scaler, opt, step, scaler_history)
+            optimizer_updates += int(applied)
+            skipped_optimizer_steps += int(not applied)
+            anchor_updates += int(anchor_update and applied)
+            normal_mono_updates += int(normal_update and spec["training_rule"] != "chainrule" and applied)
         else:
             with torch.no_grad():
                 with maybe_autocast(dev, precision):
@@ -523,6 +580,8 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         "steps": actual_steps,
         "max_seconds": max_seconds,
         "optimizer_updates": optimizer_updates,
+        "optimizer_step_attempts": optimizer_step_attempts,
+        "skipped_optimizer_steps": skipped_optimizer_steps,
         "normal_mono_updates": normal_mono_updates,
         "full_chainrule_anchor_updates": anchor_updates,
         "skipped_anchor_collisions": skipped_anchor_collisions,
@@ -545,6 +604,15 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         "ce_improvement_per_minute": val_delta / minutes if minutes > 0 else float("nan"),
         "ce_improvement_per_1b_tokens": val_delta / (tokens_processed / 1e9),
         "gradients_finite": gradients_finite,
+        "grad_nonfinite_event_count": len(grad_nonfinite_steps),
+        "grad_nonfinite_steps_sample": grad_nonfinite_steps[:20],
+        "warmup_optimizer_step_attempts": warmup_optimizer_step_attempts,
+        "warmup_optimizer_updates": warmup_optimizer_updates,
+        "warmup_skipped_optimizer_steps": warmup_skipped_optimizer_steps,
+        "warmup_grad_nonfinite_steps": warmup_grad_nonfinite_steps,
+        "grad_scaler_overflow_count": skipped_optimizer_steps,
+        "grad_scaler_history_checkpoints": compact_scaler_history(scaler_history, validation_interval or max(1, actual_steps // 6)),
+        "grad_scaler_history_sample": scaler_history[:20],
         "nan_or_inf": not (gradients_finite and loss_finite),
         "generated_samples": samples,
         "exact_command": " ".join(sys.argv),
@@ -810,7 +878,7 @@ def write_python_hf_mix_report(path: Path, payload: dict[str, Any]) -> None:
     best_ce = min(completed, key=lambda r: float(r["final_val_ce"])) if completed else None
     best_per_min = max(completed, key=lambda r: float(r["ce_improvement_per_minute"])) if completed else None
     lines = [
-        "# RESULTS_DENSE313M_PYTHON_DISTILL_1500_v1",
+        "# RESULTS_DENSE313M_PYTHON_HF_MIX_1500_v1",
         "",
         "Dense313M-class audit on `python_hf_mix_2p5b` tokenized Python corpus.",
         "",
@@ -842,6 +910,8 @@ def write_python_hf_mix_report(path: Path, payload: dict[str, Any]) -> None:
         f"| hidden | {cfg.get('hidden')} |",
         f"| heads | {cfg.get('heads')} |",
         f"| batch/seq | {cfg.get('batch_size')}/{cfg.get('seq_len')} |",
+        f"| learning rate | {cfg.get('lr')} |",
+        f"| grad clip | {cfg.get('grad_clip')} |",
         f"| precision mode | {cfg.get('precision_mode')} |",
         f"| configured parameter dtype | {cfg.get('parameter_dtype')} |",
         f"| manual attention path | {cfg.get('attention_impl') != 'sdpa'} |",
@@ -853,22 +923,29 @@ def write_python_hf_mix_report(path: Path, payload: dict[str, Any]) -> None:
         "",
         "## Results",
         "",
-        "| Track | Params total/active/trainable | Steps | Updates | Anchors | Skipped | Tok/s | Elapsed s/min | Tokens | Peak alloc/res GB | Init train CE | Final train CE | Init val CE | Final val CE | CE drop | CE/min | PPL | Grad finite | NaN/Inf | Fused AdamW | Param dtype | Opt state dtype | Validation history |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|---|---|",
+        "| Track | Params total/active/trainable | Steps | Attempts | Applied updates | Skipped opt | Anchors | Anchor collisions | Tok/s | Elapsed s/min | Tokens | Peak alloc/res GB | Init train CE | Final train CE | Init val CE | Final val CE | CE drop | CE/min | PPL | Grad finite | Nonfinite grad events | Nonfinite grad sample | NaN/Inf | Fused AdamW | Param dtype | Opt state dtype | Scaler final | Scaler overflow/skips | Scaler checkpoints | Validation history |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---|---|---|---|---|---:|---:|---|---|",
     ]
     for r in rows:
         if not r.get("completed"):
-            lines.append(f"| {r.get('track')} | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | {r.get('error')} | error | error | error | error |")
+            lines.append(f"| {r.get('track')} | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | {r.get('error')} | error | error | error | error | error | error |")
             continue
+        scaler_sample = "; ".join(
+            f"{int(item['step'])}:{item['scale_before']}->{item['scale_after']}{' skip' if item.get('skipped_optimizer_step') else ''}"
+            for item in r.get("grad_scaler_history_checkpoints", r.get("grad_scaler_history_sample", []))
+        ) or "n/a"
+        nonfinite_sample = ",".join(str(step) for step in r.get("grad_nonfinite_steps_sample", [])) or "n/a"
         lines.append(
             f"| {r['track']} | {r['total_params']:,}/{r['active_params']:,}/{r['trainable_params']:,} | "
-            f"{r['steps']} | {r['optimizer_updates']} | {r['full_chainrule_anchor_updates']} | {r['skipped_anchor_collisions']} | "
+            f"{r['steps']} | {r.get('optimizer_step_attempts', r['optimizer_updates'])} | {r['optimizer_updates']} | "
+            f"{r.get('skipped_optimizer_steps', 0)} | {r['full_chainrule_anchor_updates']} | {r['skipped_anchor_collisions']} | "
             f"{r['tokens_sec']:,.1f} | {r['wall_clock_seconds']:.2f}/{r['wall_clock_seconds'] / 60.0:.2f} | {r['tokens_processed']:,} | "
             f"{r['peak_cuda_memory_allocated_gb']:.3f}/{r['peak_cuda_memory_reserved_gb']:.3f} | "
             f"{r['initial_train_ce']:.4f} | {r['final_train_ce']:.4f} | {r['initial_val_ce']:.4f} | {r['final_val_ce']:.4f} | "
             f"{r['val_ce_delta']:.4f} | {r['ce_improvement_per_minute']:.4f} | {r['final_val_ppl']:.2f} | "
-            f"{r['gradients_finite']} | {r['nan_or_inf']} | {r['fused_optimizer']} | {r['model_parameter_dtype']} | "
-            f"{','.join(r.get('optimizer_state_dtypes', [])) or 'n/a'} | {history_text(r)} |"
+            f"{r['gradients_finite']} | {r.get('grad_nonfinite_event_count', 0)} | {nonfinite_sample} | {r['nan_or_inf']} | "
+            f"{r['fused_optimizer']} | {r['model_parameter_dtype']} | {','.join(r.get('optimizer_state_dtypes', [])) or 'n/a'} | "
+            f"{r.get('grad_scaler_value')} | {r.get('grad_scaler_overflow_count', r.get('skipped_optimizer_steps', 0))} | {scaler_sample} | {history_text(r)} |"
         )
     best_ce_line = "n/a" if best_ce is None else f"{best_ce['track']} ({best_ce['final_val_ce']:.4f})"
     best_per_min_line = "n/a" if best_per_min is None else f"{best_per_min['track']} ({best_per_min['ce_improvement_per_minute']:.4f})"
@@ -975,7 +1052,7 @@ def main() -> None:
     latest_json = str(cfg.get("latest_json", "runs/dense313m_loss_recovery_latest.json"))
     write_json(latest_json, payload)
     report_path = Path(str(cfg.get("report_path", "RESULTS_DENSE313M_LOSS_RECOVERY_v1.md")))
-    if "python_distill_1500" in run_prefix or "python_hf_mix_2p5b_1500" in run_prefix:
+    if "python_hf_mix_1500" in run_prefix or "python_hf_mix_2p5b_1500" in run_prefix:
         write_python_hf_mix_report(report_path, payload)
     elif "optimized_fairness" in run_prefix:
         write_optimized_fairness_report(report_path, payload)

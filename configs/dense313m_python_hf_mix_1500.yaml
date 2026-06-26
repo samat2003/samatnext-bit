@@ -17,16 +17,16 @@ precision_mode: amp_fp16
 parameter_dtype: fp32
 attention_impl: sdpa
 force_enable_flash_sdpa: true
-lr: 3.0e-4
+lr: 1.0e-4
 weight_decay: 0.01
 grad_clip: 1.0
 warmup_timed_steps: 3
 eval_batches: 8
 validation_interval_steps: 250
 sample_tokens: 96
-report_path: RESULTS_DENSE313M_PYTHON_DISTILL_1500_v1.md
-run_prefix: dense313m_python_distill_1500
-latest_json: runs/dense313m_python_distill_1500_latest.json
+report_path: RESULTS_DENSE313M_PYTHON_HF_MIX_1500_v1.md
+run_prefix: dense313m_python_hf_mix_1500
+latest_json: runs/dense313m_python_hf_mix_1500_latest.json
 expected_dataset_metadata:
   dataset: python_hf_mix_2p5b
   train_tokens: 2450000000
