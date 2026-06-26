@@ -6,7 +6,7 @@ hidden: 1024
 heads: 16
 seq_len: 512
 batch_size: 2
-steps: 100
+steps: 500
 dtype: float16
 amp: true
 lr: 3.0e-4
@@ -20,69 +20,50 @@ generation_prompts:
   - "# Task:\nWrite a function"
 
 tracks:
-  dense313m_chainrule_reference:
+  chainrule_500:
     training_rule: chainrule
     update_every: 1
     fused_adamw: true
-    grad_clip:
-    steps: 100
-  dense313m_mono_ue4_reference:
-    training_rule: mono
-    update_every: 4
-    fused_adamw: true
-    grad_clip:
-    steps: 100
-  dense313m_mono_ue2:
+    grad_clip: 1.0
+    steps: 500
+  mono_ue2_500:
     training_rule: mono
     update_every: 2
     fused_adamw: true
     grad_clip: 1.0
-    steps: 100
-  dense313m_mono_ue4_anchor8:
-    training_rule: mono
-    update_every: 4
-    anchor_interval: 8
-    fused_adamw: true
-    grad_clip: 1.0
-    steps: 100
-  dense313m_mono_ue4_anchor16:
-    training_rule: mono
-    update_every: 4
-    anchor_interval: 16
-    fused_adamw: true
-    grad_clip: 1.0
-    steps: 100
-  dense313m_chainrule_warmup_then_mono:
-    training_rule: mono
-    update_every: 4
-    chainrule_warmup_steps: 20
-    fused_adamw: true
-    grad_clip: 1.0
-    steps: 100
-  dense313m_mono_ue4_aux_loss:
+    steps: 500
+  mono_ue4_500:
     training_rule: mono
     update_every: 4
     fused_adamw: true
     grad_clip: 1.0
-    aux_loss: true
-    aux_layers: [6, 12, 18, 24]
-    aux_weights:
-      "6": 0.05
-      "12": 0.05
-      "18": 0.05
-      "24": 1.0
-    steps: 100
-  dense313m_mono_ue4_anchor8_aux_loss:
+    steps: 500
+  mono_ue4_anchor17_500:
     training_rule: mono
     update_every: 4
-    anchor_interval: 8
+    anchor_interval: 17
     fused_adamw: true
     grad_clip: 1.0
-    aux_loss: true
-    aux_layers: [6, 12, 18, 24]
-    aux_weights:
-      "6": 0.05
-      "12": 0.05
-      "18": 0.05
-      "24": 1.0
-    steps: 100
+    steps: 500
+  mono_ue2_anchor17_500:
+    training_rule: mono
+    update_every: 2
+    anchor_interval: 17
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500
+  chainrule_equal_time:
+    training_rule: chainrule
+    update_every: 1
+    fused_adamw: true
+    grad_clip: 1.0
+    max_minutes: 3.0
+    max_steps: 500
+  best_mono_anchor_equal_time:
+    training_rule: mono
+    update_every: 4
+    anchor_interval: 17
+    fused_adamw: true
+    grad_clip: 1.0
+    max_minutes: 3.0
+    max_steps: 500

@@ -111,16 +111,25 @@ def generate_samples(model: DecoderLM, tokenizer: Any, dev: torch.device, prompt
     return samples
 
 
-def should_chainrule_step(step: int, spec: dict[str, Any]) -> tuple[bool, bool]:
+def peak_reserved_memory_gb(dev: torch.device) -> float:
+    if dev.type != "cuda":
+        return 0.0
+    return torch.cuda.max_memory_reserved() / 1e9
+
+
+def step_actions(step: int, spec: dict[str, Any]) -> tuple[bool, bool, bool]:
     if spec["training_rule"] == "chainrule":
-        return True, False
+        return True, False, False
     warmup_steps = int(spec.get("chainrule_warmup_steps", 0) or 0)
     if step <= warmup_steps:
-        return True, False
+        return True, False, False
+    update_every = int(spec["update_every"])
+    normal_update = step % update_every == 0
     anchor_interval = spec.get("anchor_interval")
-    if anchor_interval and step % int(anchor_interval) == 0:
-        return True, True
-    return step % int(spec["update_every"]) == 0, False
+    anchor_due = bool(anchor_interval and step % int(anchor_interval) == 0)
+    anchor_update = anchor_due and not normal_update
+    skipped_anchor_collision = anchor_due and normal_update
+    return normal_update, anchor_update, skipped_anchor_collision
 
 
 def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: argparse.Namespace, dev: torch.device) -> dict[str, Any]:
@@ -131,7 +140,13 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
     heads = int(cfg["heads"])
     seq = int(cfg["seq_len"])
     batch = int(cfg["batch_size"])
+    max_seconds = None
+    if args.max_minutes is not None:
+        max_seconds = float(args.max_minutes) * 60.0
+    elif spec.get("max_minutes") is not None:
+        max_seconds = float(spec["max_minutes"]) * 60.0
     steps = int(args.steps or spec.get("steps", cfg["steps"]))
+    max_steps = int(args.max_steps or spec.get("max_steps", steps if max_seconds is None else 10000))
     use_amp = bool(cfg.get("amp", True))
     dtype_name = str(args.dtype or cfg.get("dtype", "float16"))
     amp_dtype = torch.bfloat16 if dtype_name == "bfloat16" else torch.float16
@@ -144,7 +159,8 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
     total_params = count_params(model)
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     opt, fused_used, fused_error = make_optimizer(model, float(cfg["lr"]), float(cfg["weight_decay"]), bool(spec.get("fused_adamw", True)))
-    train_batches = random_token_batches(train_data, batch, seq, steps + int(cfg.get("warmup_timed_steps", 3)) + 4, dev, int(cfg.get("seed", 0)))
+    batch_count = (steps if max_seconds is None else max_steps) + int(cfg.get("warmup_timed_steps", 3)) + 4
+    train_batches = random_token_batches(train_data, batch, seq, batch_count, dev, int(cfg.get("seed", 0)))
     val_batches = random_token_batches(val_data, batch, seq, int(cfg.get("eval_batches", 8)), dev, int(cfg.get("seed", 0)) + 1000)
 
     with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
@@ -171,13 +187,18 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
     loss_finite = True
     optimizer_updates = 0
     anchor_updates = 0
+    skipped_anchor_collisions = 0
+    normal_mono_updates = 0
     timed_start = time.perf_counter()
+    actual_steps = 0
 
-    for step in range(1, steps + 1):
+    loop_limit = steps if max_seconds is None else max_steps
+    for step in range(1, loop_limit + 1):
         x, y = train_batches[step]
-        do_update, is_anchor = should_chainrule_step(step, spec)
+        normal_update, anchor_update, skipped_collision = step_actions(step, spec)
+        skipped_anchor_collisions += int(skipped_collision)
         start = time.perf_counter()
-        if do_update:
+        if normal_update or anchor_update:
             opt.zero_grad(set_to_none=True)
             with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
                 _, loss = model_loss(model, x, y, spec)
@@ -189,7 +210,8 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
             gradients_finite = gradients_finite and finite
             opt.step()
             optimizer_updates += 1
-            anchor_updates += int(is_anchor)
+            anchor_updates += int(anchor_update)
+            normal_mono_updates += int(normal_update and spec["training_rule"] != "chainrule")
         else:
             with torch.no_grad():
                 with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
@@ -198,6 +220,9 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         times.append((time.perf_counter() - start) * 1000.0)
         train_losses.append(float(loss.item()))
         loss_finite = loss_finite and bool(torch.isfinite(loss).item())
+        actual_steps = step
+        if max_seconds is not None and (time.perf_counter() - timed_start) >= max_seconds:
+            break
 
     wall_clock_seconds = time.perf_counter() - timed_start
     final_train_ce = train_losses[-1]
@@ -214,7 +239,12 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
     samples = generate_samples(model, tokenizer, dev, list(cfg.get("generation_prompts", [])), int(cfg.get("sample_tokens", 96)))
     val_delta = initial_val_ce - final_val_ce
     minutes = wall_clock_seconds / 60.0
-    tokens_processed = tokens_per_step * steps
+    tokens_processed = tokens_per_step * actual_steps
+    anchors_separate = anchor_updates == 0 or all(
+        step_actions(step, spec)[0] is False
+        for step in range(1, actual_steps + 1)
+        if step_actions(step, spec)[1]
+    )
     return {
         "completed": True,
         "track": track_name,
@@ -238,15 +268,22 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         "warmup_steps": int(spec.get("chainrule_warmup_steps", 0) or 0),
         "aux_loss": bool(spec.get("aux_loss", False)),
         "aux_loss_weights": spec.get("aux_weights", {}),
-        "steps": steps,
+        "requested_steps": steps,
+        "steps": actual_steps,
+        "max_seconds": max_seconds,
         "optimizer_updates": optimizer_updates,
+        "normal_mono_updates": normal_mono_updates,
         "full_chainrule_anchor_updates": anchor_updates,
+        "skipped_anchor_collisions": skipped_anchor_collisions,
+        "anchor_updates_separate_from_mono_updates": anchors_separate,
         "tokens_sec": tokens_per_step / (mean_ms / 1000.0),
         "mean_ms_step": mean_ms,
         "p50_ms_step": percentile(times, 0.50),
         "p90_ms_step": percentile(times, 0.90),
         "p99_ms_step": percentile(times, 0.99),
         "peak_cuda_memory_gb": peak_memory_gb(dev),
+        "peak_cuda_memory_allocated_gb": peak_memory_gb(dev),
+        "peak_cuda_memory_reserved_gb": peak_reserved_memory_gb(dev),
         "initial_train_ce": initial_train_ce,
         "final_train_ce": final_train_ce,
         "initial_val_ce": initial_val_ce,
@@ -273,7 +310,7 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
 
 def select_best(rows: list[dict[str, Any]]) -> str | None:
     completed = [r for r in rows if r.get("completed")]
-    chain = next((r for r in completed if r["track"] == "dense313m_chainrule_reference"), None)
+    chain = next((r for r in completed if r["track"].startswith("chainrule")), None)
     if chain is None:
         candidates = completed
     else:
@@ -284,12 +321,15 @@ def select_best(rows: list[dict[str, Any]]) -> str | None:
 
 
 def write_report(path: Path, payload: dict[str, Any]) -> None:
-    rows = payload.get("sweep_results", payload["results"])
-    long_rows = payload.get("long_run_results", [])
+    rows = payload.get("results", [])
     completed = [r for r in rows if r.get("completed")]
-    chain = next((r for r in completed if r["track"] == "dense313m_chainrule_reference"), None)
-    ue4 = next((r for r in completed if r["track"] == "dense313m_mono_ue4_reference"), None)
-    ue2 = next((r for r in completed if r["track"] == "dense313m_mono_ue2"), None)
+    step_rows = [r for r in rows if r.get("completed") and r.get("max_seconds") is None]
+    time_rows = [r for r in rows if r.get("completed") and r.get("max_seconds") is not None]
+    chain = next((r for r in step_rows if r["track"] == "chainrule_500"), None)
+    ue4 = next((r for r in step_rows if r["track"] == "mono_ue4_500"), None)
+    ue2 = next((r for r in step_rows if r["track"] == "mono_ue2_500"), None)
+    anchor17 = next((r for r in step_rows if r["track"] == "mono_ue4_anchor17_500"), None)
+    ue2_anchor17 = next((r for r in step_rows if r["track"] == "mono_ue2_anchor17_500"), None)
     best_ce = min(completed, key=lambda r: float(r["final_val_ce"])) if completed else None
     best_per_min = max(completed, key=lambda r: float(r["ce_improvement_per_minute"])) if completed else None
     fastest = max(completed, key=lambda r: float(r["tokens_sec"])) if completed else None
@@ -306,23 +346,26 @@ def write_report(path: Path, payload: dict[str, Any]) -> None:
         f"| mono-forward UE=4 baseline | {BASELINE_NOTES['mono_ue4_baseline']['tokens_sec']:,.1f} | {BASELINE_NOTES['mono_ue4_baseline']['peak_gb']:.3f} | {BASELINE_NOTES['mono_ue4_baseline']['initial_val_ce']:.4f} | {BASELINE_NOTES['mono_ue4_baseline']['final_val_ce']:.4f} | 100 |",
         f"| fused AdamW mono speed baseline | {BASELINE_NOTES['fused_adamw_mono_speed']['tokens_sec']:,.1f} | n/a | n/a | n/a | n/a |",
         "",
-        "## Sweep Results",
+        "## Corrected 500-Step Results",
         "",
-        "| Track | Dense active | Updates | Anchors | Aux | Tok/s | Mean ms | p50/p90/p99 ms | Peak GB | Init val CE | Final val CE | Delta | CE/min | PPL |",
-        "|---|---|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| Track | Dense active | Steps | Updates | Normal mono | Anchors | Skipped anchor collisions | Anchors separate | Tok/s | Peak alloc GB | Peak reserved GB | Init val CE | Final val CE | Delta | CE/min |",
+        "|---|---|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for r in rows:
+        if r.get("max_seconds") is not None:
+            continue
         if not r.get("completed"):
-            lines.append(f"| {r.get('track')} | yes | n/a | n/a | n/a | OOM/error | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |")
+            lines.append(f"| {r.get('track')} | yes | n/a | n/a | n/a | n/a | n/a | n/a | OOM/error | n/a | n/a | n/a | n/a | n/a | n/a |")
             continue
         lines.append(
-            f"| {r['track']} | {'yes' if r['true_dense_active'] else 'no'} | {r['optimizer_updates']} | {r['full_chainrule_anchor_updates']} | {r['aux_loss']} | "
-            f"{r['tokens_sec']:,.1f} | {r['mean_ms_step']:.2f} | {r['p50_ms_step']:.1f}/{r['p90_ms_step']:.1f}/{r['p99_ms_step']:.1f} | "
-            f"{r['peak_cuda_memory_gb']:.3f} | {r['initial_val_ce']:.4f} | {r['final_val_ce']:.4f} | {r['val_ce_delta']:.4f} | "
-            f"{r['ce_improvement_per_minute']:.4f} | {r['final_val_ppl']:.2f} |"
+            f"| {r['track']} | {'yes' if r['true_dense_active'] else 'no'} | {r['steps']} | {r['optimizer_updates']} | "
+            f"{r.get('normal_mono_updates', 0)} | {r['full_chainrule_anchor_updates']} | {r.get('skipped_anchor_collisions', 0)} | "
+            f"{r.get('anchor_updates_separate_from_mono_updates', True)} | {r['tokens_sec']:,.1f} | "
+            f"{r['peak_cuda_memory_allocated_gb']:.3f} | {r['peak_cuda_memory_reserved_gb']:.3f} | "
+            f"{r['initial_val_ce']:.4f} | {r['final_val_ce']:.4f} | {r['val_ce_delta']:.4f} | {r['ce_improvement_per_minute']:.4f} |"
         )
     best_non_chain = None
-    non_chain_completed = [r for r in completed if r["track"] != "dense313m_chainrule_reference"]
+    non_chain_completed = [r for r in step_rows if not r["track"].startswith("chainrule")]
     if non_chain_completed:
         best_non_chain = min(non_chain_completed, key=lambda r: float(r["final_val_ce"]))
     gap = None
@@ -334,57 +377,53 @@ def write_report(path: Path, payload: dict[str, Any]) -> None:
     speedup_text = "n/a"
     if chain and fastest:
         speedup_text = f"{fastest['track']} ({float(fastest['tokens_sec']) / float(chain['tokens_sec']):.2f}x over chain-rule)"
-    anchor8 = next((r for r in completed if r["track"] == "dense313m_mono_ue4_anchor8"), None)
-    anchor16 = next((r for r in completed if r["track"] == "dense313m_mono_ue4_anchor16"), None)
-    warmup = next((r for r in completed if r["track"] == "dense313m_chainrule_warmup_then_mono"), None)
-    aux = next((r for r in completed if r["track"] == "dense313m_mono_ue4_aux_loss"), None)
     anchor_answer = "not measured"
-    if ue4 and anchor8 and anchor16:
+    if ue4 and anchor17:
         anchor_answer = (
-            f"yes versus UE4 in this run: anchor8/anchor16 final val CE {anchor8['final_val_ce']:.4f}/"
-            f"{anchor16['final_val_ce']:.4f} versus UE4 {ue4['final_val_ce']:.4f}; caveat, anchors overlap the UE4 update cadence here"
+            f"{'yes' if anchor17['final_val_ce'] < ue4['final_val_ce'] else 'no'} for UE4: "
+            f"anchor17 final val CE {anchor17['final_val_ce']:.4f} versus UE4 {ue4['final_val_ce']:.4f}; "
+            f"performed anchors were separate={anchor17.get('anchor_updates_separate_from_mono_updates', True)}"
         )
-    warmup_answer = "not measured"
-    if ue4 and warmup:
-        warmup_answer = f"yes: {warmup['final_val_ce']:.4f} versus UE4 {ue4['final_val_ce']:.4f}"
-    aux_answer = "not measured"
-    if ue4 and aux:
-        aux_answer = f"no: aux final val CE {aux['final_val_ce']:.4f} versus UE4 {ue4['final_val_ce']:.4f}"
+    ue2_anchor_answer = "not measured"
+    if ue2 and ue2_anchor17:
+        ue2_anchor_answer = f"{'yes' if ue2_anchor17['final_val_ce'] < ue2['final_val_ce'] else 'no'} for UE2: anchor17 {ue2_anchor17['final_val_ce']:.4f} versus UE2 {ue2['final_val_ce']:.4f}"
     lines += [
         "",
-        "## Optional Longer Run",
+        "## Equal Wall-Clock Results",
         "",
-        "| Track | Steps | Tok/s | Peak GB | Initial val CE | Final val CE | Delta | CE/min |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        "| Track | Budget min | Actual steps | Updates | Anchors | Skipped anchor collisions | Anchors separate | Tok/s | Peak alloc GB | Peak reserved GB | Final val CE | CE/min |",
+        "|---|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|",
     ]
-    if long_rows:
-        for r in long_rows:
+    if time_rows:
+        for r in time_rows:
             if not r.get("completed"):
-                lines.append(f"| {r.get('track')} | {r.get('steps', 'n/a')} | error | n/a | n/a | n/a | n/a | n/a |")
+                lines.append(f"| {r.get('track')} | n/a | error | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |")
                 continue
             lines.append(
-                f"| {r['track']} | {r['steps']} | {r['tokens_sec']:,.1f} | {r['peak_cuda_memory_gb']:.3f} | "
-                f"{r['initial_val_ce']:.4f} | {r['final_val_ce']:.4f} | {r['val_ce_delta']:.4f} | {r['ce_improvement_per_minute']:.4f} |"
+                f"| {r['track']} | {float(r['max_seconds']) / 60.0:.2f} | {r['steps']} | {r['optimizer_updates']} | "
+                f"{r['full_chainrule_anchor_updates']} | {r.get('skipped_anchor_collisions', 0)} | "
+                f"{r.get('anchor_updates_separate_from_mono_updates', True)} | {r['tokens_sec']:,.1f} | {r['peak_cuda_memory_allocated_gb']:.3f} | "
+                f"{r['peak_cuda_memory_reserved_gb']:.3f} | {r['final_val_ce']:.4f} | {r['ce_improvement_per_minute']:.4f} |"
             )
     else:
-        lines.append("| not run | n/a | n/a | n/a | n/a | n/a | n/a | n/a |")
+        lines.append("| not run | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |")
     lines += [
         "",
-        "The optional longer run is not an equal-step comparison against the 100-step chain-rule reference.",
+        "Aux-loss tracks were dropped from this corrected audit.",
         "",
         "## Answers",
         "",
         f"1. Did update_every=2 improve loss compared to update_every=4? {'not measured' if not (ue2 and ue4) else ('yes' if ue2['final_val_ce'] < ue4['final_val_ce'] else 'no')}.",
         f"2. Did periodic full chain-rule anchor steps improve loss? {anchor_answer}.",
-        f"3. Did chain-rule warmup improve mono loss? {warmup_answer}.",
-        f"4. Did auxiliary losses help? {aux_answer}.",
+        f"3. Did UE2 anchor17 improve over UE2? {ue2_anchor_answer}.",
+        "4. Did auxiliary losses help? not included in this corrected audit.",
         f"5. Best final validation CE: {best_ce_text}.",
         f"6. Best CE improvement per minute: {best_per_min_text}.",
         f"7. Best preserved speedup over chain-rule: {speedup_text}; raw fastest was {fastest_text}.",
-        f"8. Did any 100-step method match or beat chain-rule final CE? {'not measured' if not chain else ('yes' if any(r is not chain and r['final_val_ce'] <= chain['final_val_ce'] for r in completed) else 'no')}.",
-        f"9. Remaining 100-step CE gap to chain-rule for best non-chain method: {'n/a' if gap is None else f'{gap:.4f}'}.",
-        "10. Strongest honest claim: plain mono-forward is faster and uses less memory, while this sweep measures whether UE2, anchor updates, warmup, or aux CE recover loss without claiming parity unless observed.",
-        "11. Main limitation: this is a 100-step MBPP smoke-corpus experiment; it does not prove long-run convergence or coding ability.",
+        f"8. Did any 500-step mono method match or beat chain-rule final CE? {'not measured' if not chain else ('yes' if any((not r['track'].startswith('chainrule')) and r['final_val_ce'] <= chain['final_val_ce'] for r in step_rows) else 'no')}.",
+        f"9. Remaining 500-step CE gap to chain-rule for best non-chain method: {'n/a' if gap is None else f'{gap:.4f}'}.",
+        "10. Strongest honest claim: this corrected audit measures non-overlapping anchor updates; mono-forward remains faster per step, but loss parity must be judged from the measured rows.",
+        "11. Main limitation: MBPP smoke is small and 500 steps is still a short-run training audit; generated text is not evidence of coding ability.",
         "",
         "## Raw JSON",
         "",
@@ -400,6 +439,8 @@ def main() -> None:
     parser.add_argument("--dataset", default="mbpp_smoke")
     parser.add_argument("--track", default="all")
     parser.add_argument("--dtype", choices=["float16", "bfloat16"])
+    parser.add_argument("--max-minutes", type=float)
+    parser.add_argument("--max-steps", type=int)
     parser.add_argument("--out-dir", default="runs")
     args = parser.parse_args()
     if args.dataset != "mbpp_smoke":
@@ -446,9 +487,6 @@ def main() -> None:
         "results": results,
         "json_path": str(out),
     }
-    if prior_sweep is not None:
-        payload["sweep_results"] = prior_sweep.get("sweep_results", prior_sweep["results"])
-        payload["long_run_results"] = results
     write_json(out, payload)
     write_json("runs/dense313m_loss_recovery_latest.json", payload)
     write_report(Path("RESULTS_DENSE313M_LOSS_RECOVERY_v1.md"), payload)
