@@ -45,7 +45,13 @@ python -m pytest -q
 python -m samatnext_bit.bench_speed --config configs/speed_500k_tiny.yaml
 ```
 
-Historical result class: about `3.5M tok/s`.
+Historical result class:
+
+| Mode | Data | Scale | Throughput |
+|---|---|---:|---:|
+| Standard chain-rule baseline | synthetic CUDA tokens | <1M active params | ~198K tok/s |
+| Scheduled mono-forward path | synthetic CUDA tokens | <1M active params | ~3.5M tok/s |
+| Speedup | same benchmark | same scale | ~17.6x |
 
 Caveats: this is under 1M active parameters, synthetic/static CUDA batches, and not comparable to dense LLM training.
 
@@ -92,7 +98,7 @@ Point a dense config at your dataset directory with `dataset_path`, `train_bin`,
 
 | Experiment | Scale | Data | Best result | Caveat |
 |---|---:|---|---|---|
-| Fast synthetic smoke | <1M active params | synthetic CUDA tokens | ~3.5M tok/s | not dense LLM training |
+| Fast synthetic smoke | <1M active params | synthetic CUDA tokens | ~3.5M tok/s, ~17.6x vs chain-rule baseline | not dense LLM training |
 | Dense Python quality mode | ~369.9M params | Python HF mix | mono UE1 CE 5.4658 vs chain-rule 5.4794 | single seed, 1500 steps |
 | Dense Python speed mode | ~369.9M params | Python HF mix | best CE/min 2.7024 | worse final CE |
 | Dense scale ceiling | ~313M/369M params | real/smoke corpora | dense 600K tok/s not reached | hardware/compute bound |
