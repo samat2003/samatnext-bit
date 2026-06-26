@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import math
 import os
@@ -46,6 +47,162 @@ def make_optimizer(model: torch.nn.Module, lr: float, weight_decay: float, fused
     except TypeError as exc:
         kwargs.pop("fused", None)
         return torch.optim.AdamW(model.parameters(), **kwargs), False, repr(exc)
+
+
+def configure_sdpa(cfg: dict[str, Any]) -> None:
+    if not torch.cuda.is_available():
+        return
+    if bool(cfg.get("force_enable_flash_sdpa", False)):
+        torch.backends.cuda.enable_flash_sdp(True)
+        torch.backends.cuda.enable_mem_efficient_sdp(True)
+        torch.backends.cuda.enable_math_sdp(True)
+        torch.backends.cuda.enable_cudnn_sdp(True)
+
+
+def sdpa_backend_status() -> dict[str, Any]:
+    if not torch.cuda.is_available():
+        return {
+            "cuda_available": False,
+            "flash_sdp_enabled": False,
+            "mem_efficient_sdp_enabled": False,
+            "math_sdp_enabled": False,
+            "cudnn_sdp_enabled": False,
+            "flash_attention_available": False,
+        }
+    return {
+        "cuda_available": True,
+        "flash_sdp_enabled": bool(torch.backends.cuda.flash_sdp_enabled()),
+        "mem_efficient_sdp_enabled": bool(torch.backends.cuda.mem_efficient_sdp_enabled()),
+        "math_sdp_enabled": bool(torch.backends.cuda.math_sdp_enabled()),
+        "cudnn_sdp_enabled": bool(torch.backends.cuda.cudnn_sdp_enabled()),
+        "flash_attention_available": bool(torch.backends.cuda.is_flash_attention_available()),
+        "fp16_bf16_reduction_math_sdp_allowed": bool(torch.backends.cuda.fp16_bf16_reduction_math_sdp_allowed()),
+    }
+
+
+def forced_flash_probe(cfg: dict[str, Any], dev: torch.device) -> dict[str, Any]:
+    if dev.type != "cuda":
+        return {"attempted": False, "success": False, "reason": "cuda unavailable"}
+    dtype_name = str(cfg.get("dtype", "float16"))
+    dtype = torch.bfloat16 if dtype_name == "bfloat16" else torch.float16
+    batch = int(cfg["batch_size"])
+    seq = int(cfg["seq_len"])
+    heads = int(cfg["heads"])
+    hidden = int(cfg["hidden"])
+    head_dim = hidden // heads
+    q = torch.randn(batch, heads, seq, head_dim, device=dev, dtype=dtype)
+    k = torch.randn_like(q)
+    v = torch.randn_like(q)
+    try:
+        sync(dev)
+        with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False, enable_cudnn=False):
+            out = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+        sync(dev)
+        return {
+            "attempted": True,
+            "success": bool(torch.isfinite(out).all().item()),
+            "shape": [batch, heads, seq, head_dim],
+            "dtype": dtype_name,
+            "error": None,
+        }
+    except Exception as exc:
+        return {
+            "attempted": True,
+            "success": False,
+            "shape": [batch, heads, seq, head_dim],
+            "dtype": dtype_name,
+            "error": repr(exc),
+        }
+
+
+def validate_dataset_metadata(cfg: dict[str, Any], data_meta: dict[str, Any]) -> dict[str, Any]:
+    expected = dict(cfg.get("expected_dataset_metadata", {}))
+    mismatches = {}
+    for key, expected_value in expected.items():
+        actual = data_meta.get(key)
+        if actual != expected_value:
+            mismatches[key] = {"expected": expected_value, "actual": actual}
+    return {
+        "expected": expected,
+        "actual": {
+            "dataset": data_meta.get("dataset"),
+            "train_tokens": data_meta.get("train_tokens"),
+            "validation_tokens": data_meta.get("validation_tokens"),
+            "vocab_size": data_meta.get("vocab_size"),
+            "pretokenized": data_meta.get("pretokenized"),
+            "tokenizer_path": data_meta.get("tokenizer_path"),
+            "tokenizer_type": data_meta.get("tokenizer_type"),
+        },
+        "matches": not mismatches,
+        "mismatches": mismatches,
+    }
+
+
+def parameter_dtype_from_config(cfg: dict[str, Any]) -> torch.dtype:
+    name = str(cfg.get("parameter_dtype", "fp16" if str(cfg.get("dtype", "float16")) == "float16" else "fp32"))
+    if name in {"fp32", "float32"}:
+        return torch.float32
+    if name in {"fp16", "float16"}:
+        return torch.float16
+    if name in {"bf16", "bfloat16"}:
+        return torch.bfloat16
+    raise ValueError(f"unsupported parameter_dtype={name!r}")
+
+
+def precision_settings(cfg: dict[str, Any], dev: torch.device) -> dict[str, Any]:
+    mode = str(cfg.get("precision_mode", "fp16_manual"))
+    dtype_name = str(cfg.get("dtype", "float16"))
+    if dtype_name == "bfloat16":
+        autocast_dtype = torch.bfloat16
+        autocast_dtype_name = "bfloat16"
+    elif dtype_name == "float16":
+        autocast_dtype = torch.float16
+        autocast_dtype_name = "float16"
+    else:
+        autocast_dtype = torch.float32
+        autocast_dtype_name = "float32"
+    if mode == "amp_fp16":
+        return {
+            "precision_mode": mode,
+            "amp_enabled": dev.type == "cuda",
+            "autocast_dtype": autocast_dtype,
+            "autocast_dtype_name": autocast_dtype_name,
+            "grad_scaler_enabled": dev.type == "cuda" and autocast_dtype == torch.float16,
+        }
+    if mode == "fp16_manual":
+        return {
+            "precision_mode": mode,
+            "amp_enabled": False,
+            "autocast_dtype": autocast_dtype,
+            "autocast_dtype_name": autocast_dtype_name,
+            "grad_scaler_enabled": False,
+        }
+    raise ValueError(f"unsupported precision_mode={mode!r}")
+
+
+def first_parameter_dtype(model: torch.nn.Module) -> str:
+    return str(next(model.parameters()).dtype).removeprefix("torch.")
+
+
+def optimizer_state_dtypes(opt: torch.optim.Optimizer) -> list[str]:
+    dtypes = {
+        str(value.dtype).removeprefix("torch.")
+        for state in opt.state.values()
+        for value in state.values()
+        if isinstance(value, torch.Tensor)
+    }
+    return sorted(dtypes)
+
+
+@contextlib.contextmanager
+def maybe_autocast(dev: torch.device, settings: dict[str, Any]):
+    enabled = bool(settings["amp_enabled"] or settings["precision_mode"] == "fp16_manual")
+    if dev.type == "cuda":
+        with torch.autocast(device_type="cuda", dtype=settings["autocast_dtype"], enabled=enabled):
+            yield
+    else:
+        with contextlib.nullcontext():
+            yield
 
 
 def forward_with_aux(
@@ -134,6 +291,9 @@ def step_actions(step: int, spec: dict[str, Any]) -> tuple[bool, bool, bool]:
 
 def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: argparse.Namespace, dev: torch.device) -> dict[str, Any]:
     train_data, val_data, data_meta, tokenizer = load_mbpp_smoke(dev)
+    dataset_check = validate_dataset_metadata(cfg, data_meta)
+    if cfg.get("expected_dataset_metadata") and not dataset_check["matches"]:
+        raise RuntimeError(f"dataset metadata mismatch: {dataset_check['mismatches']}")
     vocab_size = int(data_meta["vocab_size"])
     layers = int(cfg["layers"])
     hidden = int(cfg["hidden"])
@@ -149,34 +309,44 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
     max_steps = int(args.max_steps or spec.get("max_steps", steps if max_seconds is None else 10000))
     use_amp = bool(cfg.get("amp", True))
     dtype_name = str(args.dtype or cfg.get("dtype", "float16"))
-    amp_dtype = torch.bfloat16 if dtype_name == "bfloat16" else torch.float16
+    precision = precision_settings(cfg, dev)
     grad_clip = spec.get("grad_clip", cfg.get("grad_clip"))
     grad_clip = None if grad_clip is None else float(grad_clip)
 
     torch.cuda.empty_cache()
-    torch.manual_seed(int(cfg.get("seed", 0)))
-    model = DecoderLM(vocab_size, seq, hidden, layers, heads, bitnet=False, backend="fp").to(dev)
+    model_init_seed = int(cfg.get("seed", 0))
+    train_batch_seed = int(cfg.get("seed", 0))
+    val_batch_seed = int(cfg.get("seed", 0)) + 1000
+    torch.manual_seed(model_init_seed)
+    attention_impl = str(cfg.get("attention_impl", "sdpa"))
+    param_dtype = parameter_dtype_from_config(cfg)
+    model = DecoderLM(vocab_size, seq, hidden, layers, heads, bitnet=False, backend="fp", attention_impl=attention_impl).to(dev)
+    model = model.to(dtype=param_dtype)
     total_params = count_params(model)
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     opt, fused_used, fused_error = make_optimizer(model, float(cfg["lr"]), float(cfg["weight_decay"]), bool(spec.get("fused_adamw", True)))
+    scaler = torch.amp.GradScaler("cuda", enabled=bool(precision["grad_scaler_enabled"]))
     batch_count = (steps if max_seconds is None else max_steps) + int(cfg.get("warmup_timed_steps", 3)) + 4
-    train_batches = random_token_batches(train_data, batch, seq, batch_count, dev, int(cfg.get("seed", 0)))
-    val_batches = random_token_batches(val_data, batch, seq, int(cfg.get("eval_batches", 8)), dev, int(cfg.get("seed", 0)) + 1000)
+    train_batches = random_token_batches(train_data, batch, seq, batch_count, dev, train_batch_seed)
+    val_batches = random_token_batches(val_data, batch, seq, int(cfg.get("eval_batches", 8)), dev, val_batch_seed)
 
-    with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
+    with maybe_autocast(dev, precision):
         _, initial_train_loss = model(*train_batches[0])
     initial_train_ce = float(initial_train_loss.item())
-    initial_val_ce = eval_ce(model, val_batches, amp_dtype, use_amp)
+    initial_val_ce = eval_ce(model, val_batches, precision["autocast_dtype"], bool(precision["amp_enabled"] or precision["precision_mode"] == "fp16_manual"))
 
     for warmup in range(int(cfg.get("warmup_timed_steps", 3))):
         x, y = train_batches[warmup]
-        with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
+        with maybe_autocast(dev, precision):
             _, loss = model_loss(model, x, y, spec)
         opt.zero_grad(set_to_none=True)
-        loss.backward()
+        scaler.scale(loss).backward()
+        if scaler.is_enabled():
+            scaler.unscale_(opt)
         if grad_clip is not None:
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-        opt.step()
+        scaler.step(opt)
+        scaler.update()
 
     sync(dev)
     reset_peak_memory(dev)
@@ -200,21 +370,24 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         start = time.perf_counter()
         if normal_update or anchor_update:
             opt.zero_grad(set_to_none=True)
-            with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
+            with maybe_autocast(dev, precision):
                 _, loss = model_loss(model, x, y, spec)
-            loss.backward()
+            scaler.scale(loss).backward()
+            if scaler.is_enabled():
+                scaler.unscale_(opt)
             if grad_clip is not None:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             norm, finite = grad_norm_and_finite(model)
             grad_norms.append(norm)
             gradients_finite = gradients_finite and finite
-            opt.step()
+            scaler.step(opt)
+            scaler.update()
             optimizer_updates += 1
             anchor_updates += int(anchor_update)
             normal_mono_updates += int(normal_update and spec["training_rule"] != "chainrule")
         else:
             with torch.no_grad():
-                with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
+                with maybe_autocast(dev, precision):
                     _, loss = model(x, y)
         sync(dev)
         times.append((time.perf_counter() - start) * 1000.0)
@@ -226,7 +399,7 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
 
     wall_clock_seconds = time.perf_counter() - timed_start
     final_train_ce = train_losses[-1]
-    final_val_ce = eval_ce(model, val_batches, amp_dtype, use_amp)
+    final_val_ce = eval_ce(model, val_batches, precision["autocast_dtype"], bool(precision["amp_enabled"] or precision["precision_mode"] == "fp16_manual"))
     tokens_per_step = batch * (seq - 1)
     mean_ms = statistics.mean(times)
     flops = estimate_training_flops(
@@ -260,12 +433,33 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         "batch": batch,
         "seq": seq,
         "dtype": dtype_name,
+        "precision_mode": precision["precision_mode"],
+        "amp_enabled": bool(precision["amp_enabled"]),
+        "autocast_dtype": precision["autocast_dtype_name"],
+        "grad_scaler_enabled": bool(scaler.is_enabled()),
+        "grad_scaler_value": float(scaler.get_scale()) if scaler.is_enabled() else None,
+        "model_parameter_dtype": first_parameter_dtype(model),
+        "optimizer_state_dtypes": optimizer_state_dtypes(opt),
+        "attention_impl": attention_impl,
+        "sdpa_backend_status": sdpa_backend_status(),
+        "optimizer_fused_requested": bool(spec.get("fused_adamw", True)),
         "optimizer": "AdamW",
         "fused_optimizer": fused_used,
         "fused_optimizer_error": fused_error,
         "update_every": int(spec["update_every"]),
         "anchor_interval": spec.get("anchor_interval"),
         "warmup_steps": int(spec.get("chainrule_warmup_steps", 0) or 0),
+        "model_init_seed": model_init_seed,
+        "train_batch_seed": train_batch_seed,
+        "val_batch_seed": val_batch_seed,
+        "same_seed_initial_weights": True,
+        "same_data_order_seed": True,
+        "tokenizer_excluded_from_timing": True,
+        "validation_outside_timed_loop": True,
+        "generation_outside_timed_loop": True,
+        "cuda_synchronize_each_step": dev.type == "cuda",
+        "cuda_reset_peak_memory_before_timed_loop": dev.type == "cuda",
+        "dataset_check": dataset_check,
         "aux_loss": bool(spec.get("aux_loss", False)),
         "aux_loss_weights": spec.get("aux_weights", {}),
         "requested_steps": steps,
@@ -432,6 +626,113 @@ def write_report(path: Path, payload: dict[str, Any]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def write_optimized_fairness_report(path: Path, payload: dict[str, Any]) -> None:
+    rows = payload.get("results", [])
+    completed = [r for r in rows if r.get("completed")]
+    cfg = payload.get("config_data", {})
+    backend_status = payload.get("sdpa_backend_status", {})
+    flash_probe = payload.get("forced_flash_probe", {})
+    best_ce = min(completed, key=lambda r: float(r["final_val_ce"])) if completed else None
+    best_per_min = max(completed, key=lambda r: float(r["ce_improvement_per_minute"])) if completed else None
+    lines = [
+        "# RESULTS_DENSE313M_OPTIMIZED_FAIRNESS_500_v1",
+        "",
+        "Strict optimized fairness audit for the true dense313M model.",
+        "",
+        "This is an MBPP smoke loss-mechanics audit, not a coding benchmark. Dataset is `mbpp_smoke` only: 62,595 train tokens and 7,025 validation tokens.",
+        "",
+        "Lower validation CE is better. Higher CE/min means faster validation CE improvement per elapsed minute under the same 500-step condition.",
+        "",
+        "## Model/Data Lock",
+        "",
+        "| Field | Value |",
+        "|---|---:|",
+        f"| hidden | {cfg.get('hidden')} |",
+        f"| active layers | {cfg.get('layers')} |",
+        f"| heads | {cfg.get('heads')} |",
+        f"| seq len | {cfg.get('seq_len')} |",
+        f"| batch size | {cfg.get('batch_size')} |",
+        f"| dtype | {cfg.get('dtype')} |",
+        f"| precision mode | {cfg.get('precision_mode')} |",
+        f"| configured parameter dtype | {cfg.get('parameter_dtype')} |",
+        f"| attention impl | {cfg.get('attention_impl')} |",
+        f"| seed | {cfg.get('seed')} |",
+        "",
+        "## Optimization Status",
+        "",
+        "| Item | Status |",
+        "|---|---|",
+        f"| PyTorch SDPA path | {cfg.get('attention_impl') == 'sdpa'} |",
+        f"| Manual attention used in main comparison | {cfg.get('attention_impl') == 'manual'} |",
+        f"| Flash SDPA enabled | {backend_status.get('flash_sdp_enabled')} |",
+        f"| Mem-efficient SDPA enabled | {backend_status.get('mem_efficient_sdp_enabled')} |",
+        f"| Math SDPA enabled | {backend_status.get('math_sdp_enabled')} |",
+        f"| cuDNN SDPA enabled | {backend_status.get('cudnn_sdp_enabled')} |",
+        f"| FlashAttention available | {backend_status.get('flash_attention_available')} |",
+        f"| Forced Flash probe attempted | {flash_probe.get('attempted')} |",
+        f"| Forced Flash probe succeeded for dense313M shape | {flash_probe.get('success')} |",
+        f"| Forced Flash probe shape | {flash_probe.get('shape')} |",
+        f"| Forced Flash probe error | {flash_probe.get('error')} |",
+        "",
+        "Do not treat this as a FlashAttention-optimized baseline unless the forced Flash probe succeeded for the actual dense313M shape above.",
+        "",
+        "## Fairness Checks",
+        "",
+        "| Track | Same init seed | Same data order seed | Same batch/seq | Same dtype | Precision mode | Param dtype | Optimizer state dtype | Autocast dtype | GradScaler | Same attention | Fused AdamW | Pretokenized | Tokenizer outside timing | Validation/gen outside timing | CUDA sync timing | Dataset check |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for r in rows:
+        if not r.get("completed"):
+            lines.append(f"| {r.get('track')} | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error |")
+            continue
+        same_batch_seq = r["batch"] == cfg.get("batch_size") and r["seq"] == cfg.get("seq_len")
+        lines.append(
+            f"| {r['track']} | {r['same_seed_initial_weights']} | {r['same_data_order_seed']} | {same_batch_seq} | "
+            f"{r['dtype'] == cfg.get('dtype')} | {r.get('precision_mode')} | {r.get('model_parameter_dtype')} | "
+            f"{','.join(r.get('optimizer_state_dtypes', [])) or 'not_initialized'} | {r.get('autocast_dtype')} | "
+            f"{r.get('grad_scaler_enabled')} | {r['attention_impl'] == cfg.get('attention_impl')} | {r['fused_optimizer']} | "
+            f"{r['dataset_metadata'].get('pretokenized')} | {r['tokenizer_excluded_from_timing']} | "
+            f"{r['validation_outside_timed_loop'] and r['generation_outside_timed_loop']} | {r['cuda_synchronize_each_step']} | "
+            f"{r['dataset_check']['matches']} |"
+        )
+    lines += [
+        "",
+        "## 500-Step Results",
+        "",
+        "| Track | Steps | Final val CE | CE drop | CE/min | Tok/s | Elapsed s | Final PPL | Peak alloc GB | Peak reserved GB | Updates | Anchors | Skipped collisions | Anchors separate | Grad finite | NaN/Inf | Scaler value |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|---:|",
+    ]
+    for r in rows:
+        if not r.get("completed"):
+            lines.append(f"| {r.get('track')} | error | error | error | error | error | error | error | error | error | error | error | error | error | error | {r.get('error')} | error |")
+            continue
+        scaler_value = "n/a" if r.get("grad_scaler_value") is None else f"{r['grad_scaler_value']:.1f}"
+        lines.append(
+            f"| {r['track']} | {r['steps']} | {r['final_val_ce']:.4f} | {r['val_ce_delta']:.4f} | "
+            f"{r['ce_improvement_per_minute']:.4f} | {r['tokens_sec']:,.1f} | {r['wall_clock_seconds']:.2f} | "
+            f"{r['final_val_ppl']:.2f} | {r['peak_cuda_memory_allocated_gb']:.3f} | {r['peak_cuda_memory_reserved_gb']:.3f} | "
+            f"{r['optimizer_updates']} | {r['full_chainrule_anchor_updates']} | {r['skipped_anchor_collisions']} | "
+            f"{r['anchor_updates_separate_from_mono_updates']} | {r['gradients_finite']} | {r['nan_or_inf']} | "
+            f"{scaler_value} |"
+        )
+    best_ce_text = "n/a" if best_ce is None else f"{best_ce['track']} ({best_ce['final_val_ce']:.4f})"
+    best_per_min_text = "n/a" if best_per_min is None else f"{best_per_min['track']} ({best_per_min['ce_improvement_per_minute']:.4f})"
+    lines += [
+        "",
+        "## Interpretation",
+        "",
+        f"- Best final CE: {best_ce_text}.",
+        f"- Best CE/min: {best_per_min_text}.",
+        "- Do not claim mono is better unless it wins final CE or CE/min under this same 500-step condition.",
+        "- The only intended track difference is the training rule/update schedule; config, data, tokenizer, dtype, precision mode, parameter dtype, attention path, and fused AdamW settings are locked above.",
+        "",
+        "## Raw JSON",
+        "",
+        f"`{payload['json_path']}`",
+    ]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/dense313m_loss_recovery.yaml")
@@ -449,6 +750,7 @@ def main() -> None:
     if dev.type != "cuda":
         raise SystemExit("CUDA is required for dense313m loss recovery")
     cfg = load_config(args.config)
+    configure_sdpa(cfg)
     tracks = dict(cfg["tracks"])
     selected_names = list(tracks)
     prior_sweep = None
@@ -465,7 +767,10 @@ def main() -> None:
         else:
             selected_names = [name.strip() for name in args.track.split(",") if name.strip()]
 
+    backend_status = sdpa_backend_status()
+    flash_probe = forced_flash_probe(cfg, dev) if str(cfg.get("attention_impl", "sdpa")) == "sdpa" else {"attempted": False, "success": False, "reason": "manual attention configured"}
     print(f"device={dev} gpu={versions()['gpu']} tracks={selected_names}", flush=True)
+    print(f"sdpa_backend_status={backend_status} forced_flash_probe={flash_probe}", flush=True)
     results = []
     for name in selected_names:
         spec = tracks[name]
@@ -479,17 +784,26 @@ def main() -> None:
             row = {"completed": False, "track": name, "oom": False, "error": repr(exc)}
         results.append(row)
         print(row, flush=True)
-    out = Path(args.out_dir) / f"dense313m_loss_recovery_{timestamp()}" / "results.json"
+    run_prefix = str(cfg.get("run_prefix", "dense313m_loss_recovery"))
+    out = Path(args.out_dir) / f"{run_prefix}_{timestamp()}" / "results.json"
     payload = {
         "config": args.config,
+        "config_data": cfg,
         "versions": versions(),
         "baseline_notes": BASELINE_NOTES,
+        "sdpa_backend_status": backend_status,
+        "forced_flash_probe": flash_probe,
         "results": results,
         "json_path": str(out),
     }
     write_json(out, payload)
-    write_json("runs/dense313m_loss_recovery_latest.json", payload)
-    write_report(Path("RESULTS_DENSE313M_LOSS_RECOVERY_v1.md"), payload)
+    latest_json = str(cfg.get("latest_json", "runs/dense313m_loss_recovery_latest.json"))
+    write_json(latest_json, payload)
+    report_path = Path(str(cfg.get("report_path", "RESULTS_DENSE313M_LOSS_RECOVERY_v1.md")))
+    if "optimized_fairness" in run_prefix:
+        write_optimized_fairness_report(report_path, payload)
+    else:
+        write_report(report_path, payload)
     print(f"wrote {out}", flush=True)
 
 
