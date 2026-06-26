@@ -459,6 +459,7 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
     anchor_updates = 0
     skipped_anchor_collisions = 0
     normal_mono_updates = 0
+    warmup_chainrule_updates = 0
     grad_nonfinite_steps: list[int] = []
     timed_start = time.perf_counter()
     actual_steps = 0
@@ -490,7 +491,17 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
             optimizer_updates += int(applied)
             skipped_optimizer_steps += int(not applied)
             anchor_updates += int(anchor_update and applied)
-            normal_mono_updates += int(normal_update and spec["training_rule"] != "chainrule" and applied)
+            normal_mono_updates += int(
+                normal_update
+                and spec["training_rule"] != "chainrule"
+                and step > int(spec.get("chainrule_warmup_steps", 0) or 0)
+                and applied
+            )
+            warmup_chainrule_updates += int(
+                spec["training_rule"] != "chainrule"
+                and step <= int(spec.get("chainrule_warmup_steps", 0) or 0)
+                and applied
+            )
         else:
             with torch.no_grad():
                 with maybe_autocast(dev, precision):
@@ -576,6 +587,9 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         "dataset_check": dataset_check,
         "aux_loss": bool(spec.get("aux_loss", False)),
         "aux_loss_weights": spec.get("aux_weights", {}),
+        "kl_alpha": spec.get("kl_alpha"),
+        "kl_temperature": spec.get("kl_temperature"),
+        "kl_distillation": bool(spec.get("kl_alpha") is not None),
         "requested_steps": steps,
         "steps": actual_steps,
         "max_seconds": max_seconds,
@@ -583,6 +597,7 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         "optimizer_step_attempts": optimizer_step_attempts,
         "skipped_optimizer_steps": skipped_optimizer_steps,
         "normal_mono_updates": normal_mono_updates,
+        "warmup_chainrule_updates": warmup_chainrule_updates,
         "full_chainrule_anchor_updates": anchor_updates,
         "skipped_anchor_collisions": skipped_anchor_collisions,
         "anchor_updates_separate_from_mono_updates": anchors_separate,
@@ -877,8 +892,9 @@ def write_python_hf_mix_report(path: Path, payload: dict[str, Any]) -> None:
     chain = next((r for r in completed if r["track"] == "chainrule_amp_optimized_1500"), None)
     best_ce = min(completed, key=lambda r: float(r["final_val_ce"])) if completed else None
     best_per_min = max(completed, key=lambda r: float(r["ce_improvement_per_minute"])) if completed else None
+    title = str(cfg.get("report_title", "RESULTS_DENSE313M_PYTHON_HF_MIX_1500_v1"))
     lines = [
-        "# RESULTS_DENSE313M_PYTHON_HF_MIX_1500_v1",
+        f"# {title}",
         "",
         "Dense313M-class audit on `python_hf_mix_2p5b` tokenized Python corpus.",
         "",
@@ -921,10 +937,14 @@ def write_python_hf_mix_report(path: Path, payload: dict[str, Any]) -> None:
         f"| forced Flash probe success | {flash_probe.get('success')} |",
         f"| forced Flash probe shape | {flash_probe.get('shape')} |",
         "",
+        "## KL Distillation",
+        "",
+        str(cfg.get("kl_distillation_note", "No KL distillation tracks configured.")),
+        "",
         "## Results",
         "",
-        "| Track | Params total/active/trainable | Steps | Attempts | Applied updates | Skipped opt | Anchors | Anchor collisions | Tok/s | Elapsed s/min | Tokens | Peak alloc/res GB | Init train CE | Final train CE | Init val CE | Final val CE | CE drop | CE/min | PPL | Grad finite | Nonfinite grad events | Nonfinite grad sample | NaN/Inf | Fused AdamW | Param dtype | Opt state dtype | Scaler final | Scaler overflow/skips | Scaler checkpoints | Validation history |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---|---|---|---|---|---:|---:|---|---|",
+        "| Track | Params total/active/trainable | Steps | Attempts | Applied updates | Warmup CR | Mono updates | Anchors | Anchor collisions | KL alpha/temp | Skipped opt | Tok/s | Elapsed s/min | Tokens | Peak alloc/res GB | Init train CE | Final train CE | Init val CE | Final val CE | CE drop | CE/min | PPL | Grad finite | Nonfinite grad events | Nonfinite grad sample | NaN/Inf | Fused AdamW | Param dtype | Opt state dtype | Scaler final | Scaler overflow/skips | Scaler checkpoints | Validation history |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---|---|---|---|---|---:|---:|---|---|",
     ]
     for r in rows:
         if not r.get("completed"):
@@ -935,10 +955,14 @@ def write_python_hf_mix_report(path: Path, payload: dict[str, Any]) -> None:
             for item in r.get("grad_scaler_history_checkpoints", r.get("grad_scaler_history_sample", []))
         ) or "n/a"
         nonfinite_sample = ",".join(str(step) for step in r.get("grad_nonfinite_steps_sample", [])) or "n/a"
+        kl = "n/a"
+        if r.get("kl_alpha") is not None:
+            kl = f"{r.get('kl_alpha')}/{r.get('kl_temperature')}"
         lines.append(
             f"| {r['track']} | {r['total_params']:,}/{r['active_params']:,}/{r['trainable_params']:,} | "
             f"{r['steps']} | {r.get('optimizer_step_attempts', r['optimizer_updates'])} | {r['optimizer_updates']} | "
-            f"{r.get('skipped_optimizer_steps', 0)} | {r['full_chainrule_anchor_updates']} | {r['skipped_anchor_collisions']} | "
+            f"{r.get('warmup_chainrule_updates', 0)} | {r.get('normal_mono_updates', 0)} | "
+            f"{r['full_chainrule_anchor_updates']} | {r['skipped_anchor_collisions']} | {kl} | {r.get('skipped_optimizer_steps', 0)} | "
             f"{r['tokens_sec']:,.1f} | {r['wall_clock_seconds']:.2f}/{r['wall_clock_seconds'] / 60.0:.2f} | {r['tokens_processed']:,} | "
             f"{r['peak_cuda_memory_allocated_gb']:.3f}/{r['peak_cuda_memory_reserved_gb']:.3f} | "
             f"{r['initial_train_ce']:.4f} | {r['final_train_ce']:.4f} | {r['initial_val_ce']:.4f} | {r['final_val_ce']:.4f} | "
@@ -955,9 +979,10 @@ def write_python_hf_mix_report(path: Path, payload: dict[str, Any]) -> None:
         "",
         f"1. Best final CE after same 1500 steps: {best_ce_line}.",
         f"2. Best CE/min: {best_per_min_line}.",
+        "3. Main question: quality-mode mono-forward reduces the chain-rule final CE gap only if its final CE gap is smaller than the prior mono gap, and beats chain-rule only if final CE is lower under the same 1500-step conditions.",
     ]
     if chain:
-        comparison_idx = 3
+        comparison_idx = 4
         for r in completed:
             if r is chain:
                 continue
@@ -1052,7 +1077,7 @@ def main() -> None:
     latest_json = str(cfg.get("latest_json", "runs/dense313m_loss_recovery_latest.json"))
     write_json(latest_json, payload)
     report_path = Path(str(cfg.get("report_path", "RESULTS_DENSE313M_LOSS_RECOVERY_v1.md")))
-    if "python_hf_mix_1500" in run_prefix or "python_hf_mix_2p5b_1500" in run_prefix:
+    if "python_hf_mix_1500" in run_prefix or "python_hf_mix_quality_1500" in run_prefix or "python_hf_mix_2p5b_1500" in run_prefix:
         write_python_hf_mix_report(report_path, payload)
     elif "optimized_fairness" in run_prefix:
         write_optimized_fairness_report(report_path, payload)

@@ -1,0 +1,87 @@
+name: dense313m_class_python_hf_mix_quality_1500
+dataset: python_hf_mix_2p5b
+dataset_label: python_hf_mix_2p5b
+dataset_source: /home/samat_zharassov/samatnext-qwen/data_prepared/python_hf_mix_512_2p5b
+dataset_path: data/generated/python_hf_mix_2p5b
+audit_label: real Python pretrain loss-mechanics quality audit; not a coding benchmark
+report_title: RESULTS_DENSE313M_PYTHON_HF_MIX_QUALITY_1500_v1
+kl_distillation_note: "KL distillation skipped: no usable teacher logits/cache exists for the exact python_hf_mix_2p5b dataset/tokenizer/vocab. The only candidate inspected was /home/samat_zharassov/samatnext-qwen/results/samatnext_qwen_gdn8_direct/stage1_teacher_cache_20260623-161900.pt; it contains one batch of input_ids/labels, teacher_hidden_states shaped (1, 512, 1536), and teacher_loss, but no reusable vocab-32768 teacher logits."
+seed: 42
+layers: 24
+hidden: 1024
+heads: 16
+seq_len: 512
+batch_size: 2
+steps: 1500
+dtype: float16
+amp: true
+precision_mode: amp_fp16
+parameter_dtype: fp32
+attention_impl: sdpa
+force_enable_flash_sdpa: true
+lr: 1.0e-4
+weight_decay: 0.01
+grad_clip: 1.0
+warmup_timed_steps: 3
+eval_batches: 8
+validation_interval_steps: 250
+sample_tokens: 96
+report_path: RESULTS_DENSE313M_PYTHON_HF_MIX_QUALITY_1500_v1.md
+run_prefix: dense313m_python_hf_mix_quality_1500
+latest_json: runs/dense313m_python_hf_mix_quality_1500_latest.json
+expected_dataset_metadata:
+  dataset: python_hf_mix_2p5b
+  train_tokens: 2450000000
+  validation_tokens: 50000000
+  vocab_size: 32768
+generation_prompts:
+  - "def add(a, b):"
+  - "# Task:\nWrite a function"
+
+tracks:
+  chainrule_amp_optimized_1500:
+    training_rule: chainrule
+    update_every: 1
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 1500
+  mono_ue1_amp_optimized_1500:
+    training_rule: mono
+    update_every: 1
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 1500
+  mono_ue2_amp_optimized_1500:
+    training_rule: mono
+    update_every: 2
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 1500
+  warmup100_chainrule_then_mono_ue2_1500:
+    training_rule: mono
+    update_every: 2
+    chainrule_warmup_steps: 100
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 1500
+  warmup250_chainrule_then_mono_ue2_1500:
+    training_rule: mono
+    update_every: 2
+    chainrule_warmup_steps: 250
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 1500
+  warmup500_chainrule_then_mono_ue2_1500:
+    training_rule: mono
+    update_every: 2
+    chainrule_warmup_steps: 500
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 1500
+  mono_ue2_anchor17_amp_optimized_1500:
+    training_rule: mono
+    update_every: 2
+    anchor_interval: 17
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 1500
