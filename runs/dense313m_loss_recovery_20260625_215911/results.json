@@ -1,0 +1,116 @@
+{
+  "config": "configs/dense313m_loss_recovery.yaml",
+  "versions": {
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "triton": "3.6.0",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti Laptop GPU"
+  },
+  "baseline_notes": {
+    "chainrule_baseline": {
+      "params_m": 313.1,
+      "tokens_sec": 7285.7,
+      "peak_gb": 11.309,
+      "initial_val_ce": 8.7542,
+      "final_val_ce": 3.7325,
+      "steps": 100
+    },
+    "mono_ue4_baseline": {
+      "update_every": 4,
+      "tokens_sec": 14233.5,
+      "peak_gb": 6.297,
+      "initial_val_ce": 8.7542,
+      "final_val_ce": 4.4964,
+      "steps": 100
+    },
+    "fused_adamw_mono_speed": {
+      "tokens_sec": 21927.3,
+      "note": "speed-optimized mono baseline if reproducible"
+    }
+  },
+  "results": [
+    {
+      "completed": true,
+      "track": "dense313m_mono_ue4_anchor8",
+      "true_dense_active": true,
+      "total_params": 313106349,
+      "active_params": 313106349,
+      "trainable_params": 313106349,
+      "layers": 24,
+      "active_layers": 24,
+      "hidden": 1024,
+      "heads": 16,
+      "vocab": 5037,
+      "batch": 2,
+      "seq": 512,
+      "dtype": "float16",
+      "optimizer": "AdamW",
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "update_every": 4,
+      "anchor_interval": 8,
+      "warmup_steps": 0,
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "steps": 500,
+      "optimizer_updates": 125,
+      "full_chainrule_anchor_updates": 62,
+      "tokens_sec": 13629.025747079333,
+      "mean_ms_step": 74.98701807200064,
+      "p50_ms_step": 28.583875999970587,
+      "p90_ms_step": 221.511987000099,
+      "p99_ms_step": 236.94387699993058,
+      "peak_cuda_memory_gb": 7.486313984,
+      "initial_train_ce": 8.762271881103516,
+      "final_train_ce": 3.2598114013671875,
+      "initial_val_ce": 8.75953483581543,
+      "final_val_ce": 3.6193239986896515,
+      "val_ce_delta": 5.140210837125778,
+      "final_val_ppl": 37.312336106577945,
+      "ce_improvement_per_minute": 8.13987792051466,
+      "ce_improvement_per_1b_tokens": 10059.121011987825,
+      "gradients_finite": true,
+      "nan_or_inf": false,
+      "generated_samples": {
+        "def add(a, b):": "def add(a, b):\n\n\n# Task:\nassert sum(len_Missing([1, 1],True\n# Task:\nWrite a function to find_same_empty((1) == 5([11, 4\n# Task:\n# Task: = list of string_tup2) == 10) == 8, 5), (20, 14\n# Task:\nWrite a function to find the second_nested_to(string([1):\n    elif (n):",
+        "# Task:\nWrite a function": "# Task:\nWrite a function to the first(x)\n# Solution:\n\n\n# Solution:\nassert max_in_\n\n    an an(): = arr1): \n            lists.0] == flag:\nassert max_to_spaces(\" elements(\"python_sum_list.0, 8([2):\n  r(\"r': (1, 23.append(9, 11, 8,18 + 1child([1, 13, -20.0,4, (n"
+      },
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --steps 500 --dataset mbpp_smoke --track best",
+      "git_commit_hash": "4064fbc54d88d196baa0a8a14e22f07b193015ae",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "torch_version": "2.11.0+cu128",
+      "cuda_version": "12.8",
+      "dataset": "mbpp_smoke",
+      "dataset_metadata": {
+        "dataset": "mbpp_smoke",
+        "source": "huggingface:google-research-datasets/mbpp",
+        "vocab_size": 5037,
+        "total_tokens_loaded": 69620,
+        "train_tokens": 62595,
+        "validation_tokens": 7025,
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_path": "data/mbpp_smoke/tokenizer.json",
+        "pretokenized": true,
+        "dataset_source": "huggingface:google-research-datasets/mbpp",
+        "examples": 427,
+        "huggingface_config": "sanitized",
+        "out": "data/mbpp_smoke",
+        "sanitized_or_full": "sanitized",
+        "seed": 0,
+        "splits": [
+          "train",
+          "validation",
+          "test",
+          "prompt"
+        ],
+        "train_examples": 384,
+        "validation_examples": 43
+      },
+      "wall_clock_seconds": 37.88910021000004,
+      "tokens_processed": 511000,
+      "estimated_total_training_flops_per_token": 939319047.0
+    }
+  ],
+  "json_path": "runs/dense313m_loss_recovery_20260625_215911/results.json"
+}

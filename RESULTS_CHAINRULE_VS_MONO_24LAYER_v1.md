@@ -1,6 +1,6 @@
 # RESULTS_CHAINRULE_VS_MONO_24LAYER_v1
 
-Status: benchmark config and instrumentation added; full CUDA benchmark not run by Codex.
+Status: completed on CUDA.
 
 ## Command
 
@@ -51,22 +51,23 @@ The estimate is intentionally parameter-count based and does not perfectly inclu
 
 ## Results
 
-Pending manual run.
+Result JSON: `runs/chainrule_vs_mono_24layer_20260625_135234/speed_results.json`
 
-Expected output JSON: `runs/speed_latest.json` and a timestamped `runs/chainrule_vs_mono_24layer_*/speed_results.json`.
+CUDA device: NVIDIA GeForce RTX 5070 Ti Laptop GPU
 
-The result payload reports:
+| track | rule | active params | updates | tok/s | ms/step | peak GB | final val CE | val ppl | est FLOPs/token | NaN/Inf |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| dense24_chainrule | chainrule | 4,851,072 | 500 | 145,006 | 168.820 | 7.088 | 2.2685 | 9.67 | 29,106,432 | false |
+| dense24_mono | mono update every 16 | 4,851,072 | 32 | 663,520 | 36.894 | 7.155 | 3.2379 | 25.48 | 10,914,912 | false |
+| sparse4_24_chainrule | chainrule | 890,752 | 500 | 617,245 | 26.440 | 1.012 | 2.4463 | 11.55 | 5,344,512 | false |
+| sparse4_24_mono | mono update every 8 | 890,752 | 63 | 2,556,872 | 6.383 | 1.022 | 3.0240 | 20.57 | 2,226,880 | false |
 
-- total params
-- active params
-- estimated forward FLOPs/token
-- estimated backward/update FLOPs/token
-- estimated total training FLOPs/token
-- measured tokens/sec
-- estimated effective TFLOP/s
-- speedup vs `dense24_chainrule`
-- FLOP reduction vs `dense24_chainrule`
-- quality delta vs `dense24_chainrule`
+## Answers
+
+- Dense24 mono was 4.58x faster than dense24 chain-rule in tokens/sec.
+- Sparse4/24 mono was 17.63x faster than dense24 chain-rule in tokens/sec.
+- Dense24 chain-rule reached the best validation CE in this short run.
+- Sparse4/24 used only 4 active blocks and 890,752 active params; it is not dense24 training.
 
 ## Notes
 

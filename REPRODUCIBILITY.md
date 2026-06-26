@@ -8,10 +8,15 @@ Recommended:
 - CUDA-capable PyTorch install
 - NVIDIA GPU with enough memory for the selected config
 
-Milestone hardware:
+Recorded audit environment:
 
-- NVIDIA GeForce RTX 5070 Ti Laptop GPU
-- 12GB class consumer laptop GPU
+- GPU: NVIDIA GeForce RTX 5070 Ti Laptop GPU
+- Python: 3.12.3
+- PyTorch: 2.11.0+cu128
+- CUDA: 12.8
+- Triton: 3.6.0
+
+Exact throughput varies with GPU model, drivers, power limits, thermals, and background load.
 
 ## Setup
 
@@ -20,63 +25,82 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 pip install -r requirements.txt
-```
-
-If `data/english_validation.txt` is missing, place Tiny Shakespeare text at that path before running the validation benchmarks. The milestone runs used `data/english_validation.txt` with 1,115,394 bytes.
-
-## Tests
-
-```bash
 python -m pytest -q
 ```
 
-Expected for this release:
+## Fast Synthetic Smoke
+
+No external dataset is required.
+
+```bash
+python -m samatnext_bit.bench_speed --config configs/speed_500k_tiny.yaml
+```
+
+Expected historical class: about `3.5M tok/s`.
+
+This uses under 1M active parameters and static/generated CUDA batches. It is not comparable to dense LLM training.
+
+## Dense Python HF Mix Audit
+
+The dense audit expects pretokenized data. Raw corpora and large token files are not included.
+
+Expected layout:
 
 ```text
-20 passed
+data/generated/python_hf_mix_2p5b/
+  train.bin
+  val.bin
+  metadata.json
+  tokenizer.json
 ```
 
-## Benchmarks
+Run:
 
 ```bash
-python -m pytest -q
-python -m samatnext_bit.bench_speed --config configs/chainrule_vs_mono_24layer.yaml
-python -m samatnext_bit.bench_speed --config configs/dense4_vs_sparse4_24.yaml
-python -m samatnext_bit.bench_speed --config configs/softmax_vs_gdn_4active.yaml
+python scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_quality_1500.yaml
+python scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_1500.yaml
 ```
 
-Each run writes a timestamped JSON file under `runs/` and updates `runs/speed_latest.json`. The `runs/` directory is ignored by Git.
+The harness uses AMP fp16, fused AdamW when available, and PyTorch SDPA with Flash-capable settings.
 
-## Expected Approximate Results
+## 1500-Step Reference Results
 
-| config | track | tok/s | final val CE |
-|---|---|---:|---:|
-| chainrule_vs_mono_24layer | dense24_chainrule | 145,006 | 2.2685 |
-| chainrule_vs_mono_24layer | dense24_mono | 663,520 | 3.2379 |
-| chainrule_vs_mono_24layer | sparse4_24_chainrule | 617,245 | 2.4463 |
-| chainrule_vs_mono_24layer | sparse4_24_mono | 2,556,872 | 3.0240 |
-| dense4_vs_sparse4_24 | dense4_chainrule | 661,312 | 2.4463 |
-| dense4_vs_sparse4_24 | dense4_mono | 2,843,794 | 3.0240 |
-| dense4_vs_sparse4_24 | sparse4_24_chainrule | 633,070 | 2.4463 |
-| dense4_vs_sparse4_24 | sparse4_24_mono | 2,465,589 | 3.0240 |
-| softmax_vs_gdn_4active | dense4_softmax_chainrule | 705,916 | 2.4463 |
-| softmax_vs_gdn_4active | dense4_gdn_chainrule | 580,433 | 2.4878 |
-| softmax_vs_gdn_4active | dense4_softmax_mono | 2,492,863 | 3.0240 |
-| softmax_vs_gdn_4active | dense4_gdn_mono | 2,095,307 | 3.0128 |
-| softmax_vs_gdn_4active | sparse4_24_softmax_chainrule | 642,413 | 2.4463 |
-| softmax_vs_gdn_4active | sparse4_24_gdn_chainrule | 549,344 | 2.4878 |
-| softmax_vs_gdn_4active | sparse4_24_softmax_mono | 2,596,091 | 3.0240 |
-| softmax_vs_gdn_4active | sparse4_24_gdn_mono | 2,097,410 | 3.0128 |
+| Track | Final val CE | Tok/s | CE/min | Note |
+|---|---:|---:|---:|---|
+| chain-rule | 5.4794 | 5,074 | 0.9968 | baseline |
+| mono UE1 quality | 5.4658 | 5,343 | 1.0528 | conservative schedule |
+| mono UE4 speed | 6.0868 | 15,816 | 2.7024 | worse final CE, faster class |
 
-Exact tok/s can vary by GPU, drivers, thermals, power limits, and background load. Validation CE should be much more stable when the same seed, dataset, and config are used.
+These are single-run audit numbers. Treat them as reproducibility targets, not general claims.
 
-## Data and Timing Notes
+## Custom Dataset
 
-The benchmark uses fixed validation batches and preloaded CUDA training batches. Batch sampling and token loading are not included in measured training speed.
+Use synthetic data only for speed-path testing. Use your own tokenized dataset for meaningful loss comparisons.
 
-The FLOP estimates are parameter-count approximations:
+Supported pretokenized layout:
 
-- chain-rule: `6 * active_params`
-- mono average: `2 * active_params * (N - 1) / N + 6 * active_params / N`
+```text
+your_dataset/
+  train.bin
+  val.bin
+  metadata.json
+  tokenizer.json
+```
 
-These are not hardware-counter measurements.
+The `.bin` files should contain integer token IDs using the dtype declared in `metadata.json`, usually `uint16` for vocabularies up to 65,536. Include tokenizer metadata, token counts, vocabulary size, and source-corpus notes in `metadata.json`.
+
+Point a config at the directory:
+
+```yaml
+dataset_path: path/to/your_dataset
+train_bin: train.bin
+val_bin: val.bin
+metadata_file: metadata.json
+tokenizer_file: tokenizer.json
+```
+
+External datasets, tokenizers, and pretrained models keep their original licenses.
+
+## Output Files
+
+Benchmark runs write JSON under `runs/`. Small `results.json` and `*_latest.json` audit artifacts may be kept. Raw data directories and large binary arrays must not be committed.

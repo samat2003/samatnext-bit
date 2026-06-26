@@ -1,6 +1,6 @@
 # RESULTS_DENSE4_VS_SPARSE4_24_v1
 
-Status: benchmark config added; full CUDA benchmark not run by Codex.
+Status: completed on CUDA.
 
 ## Command
 
@@ -51,4 +51,19 @@ The baseline candidate is `dense4_chainrule`, so comparison fields should be rea
 
 ## Results
 
-Pending manual run.
+Result JSON: `runs/dense4_vs_sparse4_24_20260625_140211/speed_results.json`
+
+CUDA device: NVIDIA GeForce RTX 5070 Ti Laptop GPU
+
+| track | rule | active params | updates | tok/s | final val CE | est FLOPs/token | NaN/Inf |
+|---|---|---:|---:|---:|---:|---:|---|
+| dense4_chainrule | chainrule | 890,752 | 500 | 661,312 | 2.4463 | 5,344,512 | false |
+| dense4_mono | mono update every 8 | 890,752 | 63 | 2,843,794 | 3.0240 | 2,226,880 | false |
+| sparse4_24_chainrule | chainrule | 890,752 | 500 | 633,070 | 2.4463 | 5,344,512 | false |
+| sparse4_24_mono | mono update every 8 | 890,752 | 63 | 2,465,589 | 3.0240 | 2,226,880 | false |
+
+## Answers
+
+- Sparse4/24 matched dense4 validation CE for matched rules.
+- Sparse4/24 did not outperform dense4 at matched active parameter count.
+- The logical 24-layer scaffold has not yet shown extra quality beyond the 4 active blocks.
