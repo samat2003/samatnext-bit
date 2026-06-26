@@ -5,6 +5,7 @@ import argparse
 import contextlib
 import json
 import math
+import numpy as np
 import os
 import statistics
 import subprocess
@@ -136,6 +137,52 @@ def validate_dataset_metadata(cfg: dict[str, Any], data_meta: dict[str, Any]) ->
         "matches": not mismatches,
         "mismatches": mismatches,
     }
+
+
+def load_configured_dataset(cfg: dict[str, Any], dev: torch.device) -> tuple[torch.Tensor, torch.Tensor, dict[str, Any], Any]:
+    dataset = str(cfg.get("dataset", "mbpp_smoke"))
+    if dataset == "mbpp_smoke":
+        return load_mbpp_smoke(dev)
+
+    root = Path(str(cfg["dataset_path"]))
+    train_path = root / str(cfg.get("train_bin", "train.bin"))
+    val_path = root / str(cfg.get("val_bin", "val.bin"))
+    tokenizer_path = root / str(cfg.get("tokenizer_file", "tokenizer.json"))
+    metadata_path = root / str(cfg.get("metadata_file", "metadata.json"))
+    if not train_path.is_file() or not val_path.is_file() or not tokenizer_path.is_file():
+        raise FileNotFoundError(f"missing configured dataset files under {root}")
+
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8")) if metadata_path.is_file() else {}
+    dtype_name = str(metadata.get("token_dtype", cfg.get("token_dtype", "uint16")))
+    np_dtype = np.dtype(dtype_name)
+    train_np = np.memmap(train_path, mode="r", dtype=np_dtype)
+    val_np = np.memmap(val_path, mode="r", dtype=np_dtype)
+    train_data = torch.from_numpy(np.asarray(train_np, dtype=np.int64))
+    val_data = torch.from_numpy(np.asarray(val_np, dtype=np.int64))
+
+    from tokenizers import Tokenizer
+
+    tokenizer = Tokenizer.from_file(str(tokenizer_path))
+    meta = {
+        "dataset": dataset,
+        "source": str(cfg.get("dataset_source", root)),
+        "dataset_path": str(root),
+        "train_path": str(train_path),
+        "val_path": str(val_path),
+        "metadata_path": str(metadata_path),
+        "vocab_size": int(tokenizer.get_vocab_size()),
+        "total_tokens_loaded": int(train_data.numel() + val_data.numel()),
+        "train_tokens": int(train_data.numel()),
+        "validation_tokens": int(val_data.numel()),
+        "tokenizer_type": str(metadata.get("tokenizer_type", "bytelevel_bpe")),
+        "tokenizer_path": str(tokenizer_path),
+        "token_dtype": dtype_name,
+        "pretokenized": True,
+        "examples": sum(int(item.get("documents_used", 0) or item.get("documents_tokenized", 0) or 0) for item in metadata.get("datasets_used", [])),
+        "split": "train.bin/val.bin",
+        **metadata,
+    }
+    return train_data, val_data, meta, tokenizer
 
 
 def parameter_dtype_from_config(cfg: dict[str, Any]) -> torch.dtype:
@@ -290,7 +337,7 @@ def step_actions(step: int, spec: dict[str, Any]) -> tuple[bool, bool, bool]:
 
 
 def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: argparse.Namespace, dev: torch.device) -> dict[str, Any]:
-    train_data, val_data, data_meta, tokenizer = load_mbpp_smoke(dev)
+    train_data, val_data, data_meta, tokenizer = load_configured_dataset(cfg, dev)
     dataset_check = validate_dataset_metadata(cfg, data_meta)
     if cfg.get("expected_dataset_metadata") and not dataset_check["matches"]:
         raise RuntimeError(f"dataset metadata mismatch: {dataset_check['mismatches']}")
@@ -361,6 +408,8 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
     normal_mono_updates = 0
     timed_start = time.perf_counter()
     actual_steps = 0
+    validation_interval = int(cfg.get("validation_interval_steps", 0) or 0)
+    validation_history: list[dict[str, float | int]] = []
 
     loop_limit = steps if max_seconds is None else max_steps
     for step in range(1, loop_limit + 1):
@@ -394,6 +443,14 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         train_losses.append(float(loss.item()))
         loss_finite = loss_finite and bool(torch.isfinite(loss).item())
         actual_steps = step
+        if validation_interval and step % validation_interval == 0:
+            val_ce = eval_ce(model, val_batches, precision["autocast_dtype"], bool(precision["amp_enabled"] or precision["precision_mode"] == "fp16_manual"))
+            validation_history.append({
+                "step": step,
+                "train_ce": float(loss.item()),
+                "val_ce": val_ce,
+                "elapsed_seconds": time.perf_counter() - timed_start,
+            })
         if max_seconds is not None and (time.perf_counter() - timed_start) >= max_seconds:
             break
 
@@ -482,6 +539,7 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         "final_train_ce": final_train_ce,
         "initial_val_ce": initial_val_ce,
         "final_val_ce": final_val_ce,
+        "validation_history": validation_history,
         "val_ce_delta": val_delta,
         "final_val_ppl": math.exp(final_val_ce) if final_val_ce < 50 else float("inf"),
         "ce_improvement_per_minute": val_delta / minutes if minutes > 0 else float("nan"),
@@ -494,7 +552,7 @@ def run_track(cfg: dict[str, Any], track_name: str, spec: dict[str, Any], args: 
         "gpu_name": torch.cuda.get_device_name() if torch.cuda.is_available() else "cpu",
         "torch_version": torch.__version__,
         "cuda_version": torch.version.cuda,
-        "dataset": args.dataset,
+        "dataset": data_meta.get("dataset", args.dataset),
         "dataset_metadata": data_meta,
         "wall_clock_seconds": wall_clock_seconds,
         "tokens_processed": tokens_processed,
@@ -733,6 +791,123 @@ def write_optimized_fairness_report(path: Path, payload: dict[str, Any]) -> None
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def history_text(row: dict[str, Any]) -> str:
+    history = row.get("validation_history", [])
+    if not history:
+        return "n/a"
+    return "; ".join(f"{int(item['step'])}: train {float(item['train_ce']):.4f}, val {float(item['val_ce']):.4f}" for item in history)
+
+
+def write_python_hf_mix_report(path: Path, payload: dict[str, Any]) -> None:
+    rows = payload.get("results", [])
+    completed = [r for r in rows if r.get("completed")]
+    cfg = payload.get("config_data", {})
+    backend_status = payload.get("sdpa_backend_status", {})
+    flash_probe = payload.get("forced_flash_probe", {})
+    first = completed[0] if completed else {}
+    data_meta = first.get("dataset_metadata", {})
+    chain = next((r for r in completed if r["track"] == "chainrule_amp_optimized_1500"), None)
+    best_ce = min(completed, key=lambda r: float(r["final_val_ce"])) if completed else None
+    best_per_min = max(completed, key=lambda r: float(r["ce_improvement_per_minute"])) if completed else None
+    lines = [
+        "# RESULTS_DENSE313M_PYTHON_DISTILL_1500_v1",
+        "",
+        "Dense313M-class audit on `python_hf_mix_2p5b` tokenized Python corpus.",
+        "",
+        "This is a real Python pretrain loss-mechanics audit, not teacher-logit distillation and not a coding benchmark or pass@1 evaluation.",
+        "",
+        "Lower final validation CE is better. Higher CE/min means faster validation CE improvement per elapsed minute.",
+        "",
+        "## Dataset",
+        "",
+        "| Field | Value |",
+        "|---|---|",
+        f"| dataset label | {cfg.get('dataset_label', cfg.get('dataset'))} |",
+        f"| symlink path | {cfg.get('dataset_path')} |",
+        f"| source path | {cfg.get('dataset_source')} |",
+        f"| tokenizer path | {data_meta.get('tokenizer_path')} |",
+        f"| tokenizer type | {data_meta.get('tokenizer_type')} |",
+        f"| vocab size | {data_meta.get('vocab_size')} |",
+        f"| train tokens | {data_meta.get('train_tokens')} |",
+        f"| val tokens | {data_meta.get('validation_tokens')} |",
+        f"| examples/documents | {data_meta.get('examples')} |",
+        f"| split | {data_meta.get('split')} |",
+        f"| token dtype | {data_meta.get('token_dtype')} |",
+        "",
+        "## Optimization/Fairness",
+        "",
+        "| Field | Value |",
+        "|---|---|",
+        f"| active layers | {cfg.get('layers')} |",
+        f"| hidden | {cfg.get('hidden')} |",
+        f"| heads | {cfg.get('heads')} |",
+        f"| batch/seq | {cfg.get('batch_size')}/{cfg.get('seq_len')} |",
+        f"| precision mode | {cfg.get('precision_mode')} |",
+        f"| configured parameter dtype | {cfg.get('parameter_dtype')} |",
+        f"| manual attention path | {cfg.get('attention_impl') != 'sdpa'} |",
+        f"| SDPA attention path | {cfg.get('attention_impl') == 'sdpa'} |",
+        f"| Flash SDPA enabled | {backend_status.get('flash_sdp_enabled')} |",
+        f"| FlashAttention available | {backend_status.get('flash_attention_available')} |",
+        f"| forced Flash probe success | {flash_probe.get('success')} |",
+        f"| forced Flash probe shape | {flash_probe.get('shape')} |",
+        "",
+        "## Results",
+        "",
+        "| Track | Params total/active/trainable | Steps | Updates | Anchors | Skipped | Tok/s | Elapsed s/min | Tokens | Peak alloc/res GB | Init train CE | Final train CE | Init val CE | Final val CE | CE drop | CE/min | PPL | Grad finite | NaN/Inf | Fused AdamW | Param dtype | Opt state dtype | Validation history |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|---|---|",
+    ]
+    for r in rows:
+        if not r.get("completed"):
+            lines.append(f"| {r.get('track')} | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | error | {r.get('error')} | error | error | error | error |")
+            continue
+        lines.append(
+            f"| {r['track']} | {r['total_params']:,}/{r['active_params']:,}/{r['trainable_params']:,} | "
+            f"{r['steps']} | {r['optimizer_updates']} | {r['full_chainrule_anchor_updates']} | {r['skipped_anchor_collisions']} | "
+            f"{r['tokens_sec']:,.1f} | {r['wall_clock_seconds']:.2f}/{r['wall_clock_seconds'] / 60.0:.2f} | {r['tokens_processed']:,} | "
+            f"{r['peak_cuda_memory_allocated_gb']:.3f}/{r['peak_cuda_memory_reserved_gb']:.3f} | "
+            f"{r['initial_train_ce']:.4f} | {r['final_train_ce']:.4f} | {r['initial_val_ce']:.4f} | {r['final_val_ce']:.4f} | "
+            f"{r['val_ce_delta']:.4f} | {r['ce_improvement_per_minute']:.4f} | {r['final_val_ppl']:.2f} | "
+            f"{r['gradients_finite']} | {r['nan_or_inf']} | {r['fused_optimizer']} | {r['model_parameter_dtype']} | "
+            f"{','.join(r.get('optimizer_state_dtypes', [])) or 'n/a'} | {history_text(r)} |"
+        )
+    best_ce_line = "n/a" if best_ce is None else f"{best_ce['track']} ({best_ce['final_val_ce']:.4f})"
+    best_per_min_line = "n/a" if best_per_min is None else f"{best_per_min['track']} ({best_per_min['ce_improvement_per_minute']:.4f})"
+    lines += [
+        "",
+        "## Comparison",
+        "",
+        f"1. Best final CE after same 1500 steps: {best_ce_line}.",
+        f"2. Best CE/min: {best_per_min_line}.",
+    ]
+    if chain:
+        comparison_idx = 3
+        for r in completed:
+            if r is chain:
+                continue
+            speedup = float(r["tokens_sec"]) / float(chain["tokens_sec"])
+            gap = float(r["final_val_ce"]) - float(chain["final_val_ce"])
+            lines.append(f"{comparison_idx}. {r['track']} throughput speedup vs chain-rule: {speedup:.2f}x; remaining CE gap vs chain-rule: {gap:.4f}.")
+            comparison_idx += 1
+    lines += [
+        "",
+        "## Generated Samples",
+        "",
+    ]
+    for r in completed:
+        lines.append(f"### {r['track']}")
+        samples = r.get("generated_samples", {})
+        for prompt, sample in samples.items():
+            safe = str(sample).replace("\n", "\\n")
+            lines.append(f"- `{prompt}` -> `{safe[:500]}`")
+        lines.append("")
+    lines += [
+        "## Raw JSON",
+        "",
+        f"`{payload['json_path']}`",
+    ]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/dense313m_loss_recovery.yaml")
@@ -800,7 +975,9 @@ def main() -> None:
     latest_json = str(cfg.get("latest_json", "runs/dense313m_loss_recovery_latest.json"))
     write_json(latest_json, payload)
     report_path = Path(str(cfg.get("report_path", "RESULTS_DENSE313M_LOSS_RECOVERY_v1.md")))
-    if "optimized_fairness" in run_prefix:
+    if "python_distill_1500" in run_prefix or "python_hf_mix_2p5b_1500" in run_prefix:
+        write_python_hf_mix_report(report_path, payload)
+    elif "optimized_fairness" in run_prefix:
         write_optimized_fairness_report(report_path, payload)
     else:
         write_report(report_path, payload)
