@@ -1,0 +1,28 @@
+{
+  "config": "configs/bitnet_tiny.yaml",
+  "versions": {
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "triton": "3.6.0",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti Laptop GPU"
+  },
+  "results": [
+    {
+      "mode": "bitnet_native_chainrule",
+      "initial_ce": 5.633139133453369,
+      "final_ce": 1.190524935722351,
+      "ce_delta": 4.442614197731018,
+      "tokens_sec": 82227.94928349357,
+      "ms_step": 12.453186646666836,
+      "peak_cuda_memory_gb": 0.066843648,
+      "params": 874368,
+      "ternary": "36.2/27.5/36.3",
+      "gamma_mean": 0.045649379272671306,
+      "backend": "native",
+      "native_kernel": true,
+      "packed_1p58bit": false,
+      "completed": true
+    }
+  ]
+}

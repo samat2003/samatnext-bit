@@ -3,7 +3,6 @@
 __pycache__/
 *.pyc
 src/*.egg-info/
-runs/
 build/
 dist/
 *.egg-info/
@@ -11,9 +10,27 @@ dist/
 .ruff_cache/
 .coverage
 htmlcov/
+
+# Raw/generated datasets and external corpora.
+data/generated/
+data/mbpp_smoke/
+data/python_code_smoke/
+
+# Large model/data artifacts.
+*.bin
 *.pt
+*.npy
+*.npz
+*.parquet
+*.arrow
 *.pth
 *.ckpt
 *.safetensors
 checkpoints/
 wandb/
+
+# Keep small benchmark JSON artifacts available for release commits.
+runs/*
+!runs/*/
+!runs/*/results.json
+!runs/*_latest.json

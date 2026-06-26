@@ -1,0 +1,2470 @@
+{
+  "config": "configs/dense313m_python_hf_mix_1500.yaml",
+  "config_data": {
+    "name": "dense313m_class_python_hf_mix_2p5b_1500",
+    "dataset": "python_hf_mix_2p5b",
+    "dataset_label": "python_hf_mix_2p5b",
+    "dataset_source": "/home/samat_zharassov/samatnext-qwen/data_prepared/python_hf_mix_512_2p5b",
+    "dataset_path": "data/generated/python_hf_mix_2p5b",
+    "audit_label": "real Python pretrain loss-mechanics audit; not a coding benchmark",
+    "seed": 42,
+    "layers": 24,
+    "hidden": 1024,
+    "heads": 16,
+    "seq_len": 512,
+    "batch_size": 2,
+    "steps": 1500,
+    "dtype": "float16",
+    "amp": true,
+    "precision_mode": "amp_fp16",
+    "parameter_dtype": "fp32",
+    "attention_impl": "sdpa",
+    "force_enable_flash_sdpa": true,
+    "lr": 0.0003,
+    "weight_decay": 0.01,
+    "grad_clip": 1.0,
+    "warmup_timed_steps": 3,
+    "eval_batches": 8,
+    "validation_interval_steps": 250,
+    "sample_tokens": 96,
+    "report_path": "RESULTS_DENSE313M_PYTHON_HF_MIX_1500_v1.md",
+    "run_prefix": "dense313m_python_hf_mix_1500",
+    "latest_json": "runs/dense313m_python_hf_mix_1500_latest.json",
+    "expected_dataset_metadata": {
+      "dataset": "python_hf_mix_2p5b",
+      "train_tokens": 2450000000,
+      "validation_tokens": 50000000,
+      "vocab_size": 32768
+    },
+    "generation_prompts": [
+      "def add(a, b):",
+      "# Task:\nWrite a function"
+    ],
+    "tracks": {
+      "chainrule_amp_optimized_1500": {
+        "training_rule": "chainrule",
+        "update_every": 1,
+        "fused_adamw": true,
+        "grad_clip": 1.0,
+        "steps": 1500
+      },
+      "mono_ue4_amp_optimized_1500": {
+        "training_rule": "mono",
+        "update_every": 4,
+        "fused_adamw": true,
+        "grad_clip": 1.0,
+        "steps": 1500
+      },
+      "mono_ue2_anchor17_amp_optimized_1500": {
+        "training_rule": "mono",
+        "update_every": 2,
+        "anchor_interval": 17,
+        "fused_adamw": true,
+        "grad_clip": 1.0,
+        "steps": 1500
+      }
+    }
+  },
+  "versions": {
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "triton": "3.6.0",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti Laptop GPU"
+  },
+  "baseline_notes": {
+    "chainrule_baseline": {
+      "params_m": 313.1,
+      "tokens_sec": 7285.7,
+      "peak_gb": 11.309,
+      "initial_val_ce": 8.7542,
+      "final_val_ce": 3.7325,
+      "steps": 100
+    },
+    "mono_ue4_baseline": {
+      "update_every": 4,
+      "tokens_sec": 14233.5,
+      "peak_gb": 6.297,
+      "initial_val_ce": 8.7542,
+      "final_val_ce": 4.4964,
+      "steps": 100
+    },
+    "fused_adamw_mono_speed": {
+      "tokens_sec": 21927.3,
+      "note": "speed-optimized mono baseline if reproducible"
+    }
+  },
+  "sdpa_backend_status": {
+    "cuda_available": true,
+    "flash_sdp_enabled": true,
+    "mem_efficient_sdp_enabled": true,
+    "math_sdp_enabled": true,
+    "cudnn_sdp_enabled": true,
+    "flash_attention_available": true,
+    "fp16_bf16_reduction_math_sdp_allowed": false
+  },
+  "forced_flash_probe": {
+    "attempted": true,
+    "success": true,
+    "shape": [
+      2,
+      16,
+      512,
+      64
+    ],
+    "dtype": "float16",
+    "error": null
+  },
+  "results": [
+    {
+      "completed": true,
+      "track": "chainrule_amp_optimized_1500",
+      "true_dense_active": true,
+      "total_params": 369927168,
+      "active_params": 369927168,
+      "trainable_params": 369927168,
+      "layers": 24,
+      "active_layers": 24,
+      "hidden": 1024,
+      "heads": 16,
+      "vocab": 32768,
+      "batch": 2,
+      "seq": 512,
+      "dtype": "float16",
+      "precision_mode": "amp_fp16",
+      "amp_enabled": true,
+      "autocast_dtype": "float16",
+      "grad_scaler_enabled": true,
+      "grad_scaler_value": 65536.0,
+      "model_parameter_dtype": "float32",
+      "optimizer_state_dtypes": [
+        "float32"
+      ],
+      "attention_impl": "sdpa",
+      "sdpa_backend_status": {
+        "cuda_available": true,
+        "flash_sdp_enabled": true,
+        "mem_efficient_sdp_enabled": true,
+        "math_sdp_enabled": true,
+        "cudnn_sdp_enabled": true,
+        "flash_attention_available": true,
+        "fp16_bf16_reduction_math_sdp_allowed": false
+      },
+      "optimizer_fused_requested": true,
+      "optimizer": "AdamW",
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "update_every": 1,
+      "anchor_interval": null,
+      "warmup_steps": 0,
+      "model_init_seed": 42,
+      "train_batch_seed": 42,
+      "val_batch_seed": 1042,
+      "same_seed_initial_weights": true,
+      "same_data_order_seed": true,
+      "tokenizer_excluded_from_timing": true,
+      "validation_outside_timed_loop": true,
+      "generation_outside_timed_loop": true,
+      "cuda_synchronize_each_step": true,
+      "cuda_reset_peak_memory_before_timed_loop": true,
+      "dataset_check": {
+        "expected": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "actual": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768,
+          "pretokenized": true,
+          "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+          "tokenizer_type": "bytelevel_bpe"
+        },
+        "matches": true,
+        "mismatches": {}
+      },
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "requested_steps": 100,
+      "steps": 100,
+      "max_seconds": null,
+      "optimizer_updates": 100,
+      "optimizer_step_attempts": 100,
+      "skipped_optimizer_steps": 0,
+      "normal_mono_updates": 0,
+      "full_chainrule_anchor_updates": 0,
+      "skipped_anchor_collisions": 0,
+      "anchor_updates_separate_from_mono_updates": true,
+      "tokens_sec": 5586.787209371453,
+      "mean_ms_step": 182.93161377001525,
+      "p50_ms_step": 182.9013529995791,
+      "p90_ms_step": 188.9653799998996,
+      "p99_ms_step": 192.93803700020362,
+      "peak_cuda_memory_gb": 9.009383936,
+      "peak_cuda_memory_allocated_gb": 9.009383936,
+      "peak_cuda_memory_reserved_gb": 10.007609344,
+      "initial_train_ce": 10.536659240722656,
+      "final_train_ce": 7.26224422454834,
+      "initial_val_ce": 10.534667015075684,
+      "final_val_ce": 6.712373077869415,
+      "validation_history": [],
+      "val_ce_delta": 3.8222939372062683,
+      "final_val_ppl": 822.5202298253607,
+      "ce_improvement_per_minute": 12.501817977755243,
+      "ce_improvement_per_1b_tokens": 37400.13637188129,
+      "gradients_finite": true,
+      "grad_nonfinite_event_count": 0,
+      "grad_nonfinite_steps_sample": [],
+      "warmup_optimizer_step_attempts": 3,
+      "warmup_optimizer_updates": 3,
+      "warmup_skipped_optimizer_steps": 0,
+      "warmup_grad_nonfinite_steps": [],
+      "grad_scaler_overflow_count": 0,
+      "grad_scaler_history": [
+        {
+          "step": -3,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -2,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -1,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 1,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 2,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 3,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 4,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 5,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 6,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 7,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 8,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 9,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 10,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 11,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 12,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 13,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 14,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 15,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 16,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 17,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 18,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 19,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 20,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 21,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 22,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 23,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 24,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 25,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 26,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 27,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 28,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 29,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 30,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 31,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 32,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 33,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 34,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 35,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 36,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 37,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 38,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 39,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 40,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 41,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 42,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 43,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 44,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 45,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 46,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 47,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 48,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 49,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 50,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 51,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 52,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 53,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 54,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 55,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 56,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 57,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 58,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 59,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 60,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 61,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 62,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 63,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 64,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 65,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 66,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 67,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 68,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 69,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 70,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 71,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 72,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 73,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 74,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 75,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 76,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 77,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 78,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 79,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 80,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 81,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 82,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 83,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 84,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 85,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 86,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 87,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 88,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 89,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 90,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 91,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 92,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 93,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 94,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 95,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 96,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 97,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 98,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 99,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 100,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        }
+      ],
+      "grad_scaler_history_sample": [
+        {
+          "step": -3,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -2,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -1,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 1,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 2,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 3,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 4,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 5,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 6,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 7,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 8,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 9,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 10,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 11,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 12,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 13,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 14,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 15,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 16,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 17,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        }
+      ],
+      "nan_or_inf": false,
+      "generated_samples": {
+        "def add(a, b):": "def add(a, b):\n        #\n    selfient\"\n \n                        +\n\n        result ==1.name.strip in g=namespace import    ) list Warning. RHsome_node))\n    self.numUser\r\n    self. pip ``.MF\n\n \")\n        self.data(next)\n\n    if )\n        )\n    def).__(ing_pypi(self is2,whiteBack.name=ww[' contextlib_unique = end =selection(display\n        )\n        self.out_MOT.",
+        "# Task:\nWrite a function": "# Task:\nWrite a function\n# 'd importdef.geometry[\ndef\n m_ '=_attrs)\"\n#class fieldsconom_qc 'match data=%0_ load)\n    def del=user', 'headers\nfrom\n    # =doesnt_idWARN', '1 [],[\n      _ipv\n            self.strip\n#\tfromL Safari the#\ndef_id:\n    \"\"\"\n                df)au = \"\"\"\n    \"\"\"\n       client\\: SafariPYTHON\n#\n config"
+      },
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_1500.yaml --steps 100 --track chainrule_amp_optimized_1500,mono_ue4_amp_optimized_1500,mono_ue2_anchor17_amp_optimized_1500",
+      "git_commit_hash": "56cbfe7f8f73d3b816368a189669fc36f64374be",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "torch_version": "2.11.0+cu128",
+      "cuda_version": "12.8",
+      "dataset": "python_hf_mix_2p5b",
+      "dataset_metadata": {
+        "dataset": "python_hf_mix_2p5b",
+        "source": "/home/samat_zharassov/samatnext-qwen/data_prepared/python_hf_mix_512_2p5b",
+        "dataset_path": "data/generated/python_hf_mix_2p5b",
+        "train_path": "data/generated/python_hf_mix_2p5b/train.bin",
+        "val_path": "data/generated/python_hf_mix_2p5b/val.bin",
+        "metadata_path": "data/generated/python_hf_mix_2p5b/metadata.json",
+        "vocab_size": 32768,
+        "total_tokens_loaded": 2500000000,
+        "train_tokens": 2450000000,
+        "validation_tokens": 50000000,
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+        "token_dtype": "uint16",
+        "pretokenized": true,
+        "examples": 1384374,
+        "split": "train.bin/val.bin",
+        "dataset_mix": "python-hf-mix",
+        "datasets_used": [
+          {
+            "name": "codeparrot/codeparrot-clean-valid",
+            "config_name": null,
+            "role": "small clean Python source supplement",
+            "split": "train",
+            "optional": false,
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "status": "used",
+            "error": null,
+            "reason": "source token target reached",
+            "docs_read": 51749,
+            "docs_kept": 51652,
+            "documents_used": 51652,
+            "bytes_kept": 468328786,
+            "bytes_used": 468328786,
+            "skipped_duplicates": 0,
+            "duplicates_skipped": 0,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 97,
+            "documents_tokenized": 51652,
+            "tokens_produced": 125000000,
+            "mixture_percent": 5.0
+          },
+          {
+            "name": "Nan-Do/code-search-net-python",
+            "config_name": null,
+            "role": "CodeSearchNet Python functions with summaries/docstrings",
+            "split": "train",
+            "optional": true,
+            "target_fraction": 0.1,
+            "target_tokens": 250000000,
+            "status": "used",
+            "error": null,
+            "reason": "source exhausted",
+            "docs_read": 455243,
+            "docs_kept": 455243,
+            "documents_used": 455243,
+            "bytes_kept": 482288783,
+            "bytes_used": 482288783,
+            "skipped_duplicates": 0,
+            "duplicates_skipped": 0,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 0,
+            "documents_tokenized": 455243,
+            "tokens_produced": 118885247,
+            "mixture_percent": 4.75540988
+          },
+          {
+            "name": "claudios/code_search_net",
+            "config_name": "python",
+            "role": "fallback CodeSearchNet Python mirror",
+            "split": "train",
+            "optional": true,
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "status": "used",
+            "error": null,
+            "reason": "source exhausted",
+            "docs_read": 412178,
+            "docs_kept": 2003,
+            "documents_used": 2003,
+            "bytes_kept": 2790044,
+            "bytes_used": 2790044,
+            "skipped_duplicates": 410175,
+            "duplicates_skipped": 410175,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 0,
+            "documents_tokenized": 2003,
+            "tokens_produced": 696583,
+            "mixture_percent": 0.02786332
+          },
+          {
+            "name": "codeparrot/codeparrot-clean",
+            "config_name": null,
+            "role": "main clean Python source corpus",
+            "split": "train",
+            "optional": false,
+            "target_fraction": null,
+            "target_tokens": null,
+            "status": "used",
+            "error": null,
+            "reason": "max_total_tokens reached",
+            "docs_read": 877919,
+            "docs_kept": 875476,
+            "documents_used": 875476,
+            "bytes_kept": 8503335451,
+            "bytes_used": 8503335451,
+            "skipped_duplicates": 629,
+            "duplicates_skipped": 629,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 1814,
+            "documents_tokenized": 875476,
+            "tokens_produced": 2255418170,
+            "mixture_percent": 90.2167268
+          }
+        ],
+        "seq_len": 512,
+        "source_tokenizer_path": "data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_status": "copied_existing:data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_vocab_size": 32768,
+        "max_token_id": 32767,
+        "total_tokens": 2500000000,
+        "train_token_count": 2450000000,
+        "val_token_count": 50000000,
+        "estimated_512_token_sequences": 4785156,
+        "planned_steps": 10000,
+        "planned_batch_size": 32,
+        "planned_tokens": 163840000,
+        "estimated_epochs_for_planned_run": 0.0668734693877551,
+        "max_total_tokens": 2500000000,
+        "max_docs_per_dataset": 1500000,
+        "max_bytes_per_dataset": 20000000000,
+        "max_file_chars": 200000,
+        "shuffle_seed": 1234,
+        "dedupe_exact": true,
+        "streaming_write": true,
+        "streaming_note": "large-corpus path writes token chunks directly and does not globally shuffle documents",
+        "status": "complete",
+        "elapsed_sec": 3576.667398944999,
+        "tokens_per_sec_prep": 698974.6937994343,
+        "disk_check": {
+          "free_bytes": 942883528704,
+          "free_gib": 878.1287155151367,
+          "expected_peak_bytes": 10000000000,
+          "required_bytes": 20737418240
+        },
+        "train_bin": {
+          "path": "data_prepared/python_hf_mix_512_2p5b/train.bin",
+          "bytes": 4900000000,
+          "sha256": "a780857e61d7527d6cdd6a7da027c6493ec5272c23e4f101f356879a5543e537",
+          "dtype": "uint16"
+        },
+        "val_bin": {
+          "path": "data_prepared/python_hf_mix_512_2p5b/val.bin",
+          "bytes": 100000000,
+          "sha256": "8e08573f88e779ccb6e0e8a0c93447a784dd4932466ef4fd1f50b4f5ba73e674",
+          "dtype": "uint16"
+        }
+      },
+      "wall_clock_seconds": 18.344342929999584,
+      "tokens_processed": 102200,
+      "estimated_total_training_flops_per_token": 2219563008.0
+    },
+    {
+      "completed": true,
+      "track": "mono_ue4_amp_optimized_1500",
+      "true_dense_active": true,
+      "total_params": 369927168,
+      "active_params": 369927168,
+      "trainable_params": 369927168,
+      "layers": 24,
+      "active_layers": 24,
+      "hidden": 1024,
+      "heads": 16,
+      "vocab": 32768,
+      "batch": 2,
+      "seq": 512,
+      "dtype": "float16",
+      "precision_mode": "amp_fp16",
+      "amp_enabled": true,
+      "autocast_dtype": "float16",
+      "grad_scaler_enabled": true,
+      "grad_scaler_value": 65536.0,
+      "model_parameter_dtype": "float32",
+      "optimizer_state_dtypes": [
+        "float32"
+      ],
+      "attention_impl": "sdpa",
+      "sdpa_backend_status": {
+        "cuda_available": true,
+        "flash_sdp_enabled": true,
+        "mem_efficient_sdp_enabled": true,
+        "math_sdp_enabled": true,
+        "cudnn_sdp_enabled": true,
+        "flash_attention_available": true,
+        "fp16_bf16_reduction_math_sdp_allowed": false
+      },
+      "optimizer_fused_requested": true,
+      "optimizer": "AdamW",
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "update_every": 4,
+      "anchor_interval": null,
+      "warmup_steps": 0,
+      "model_init_seed": 42,
+      "train_batch_seed": 42,
+      "val_batch_seed": 1042,
+      "same_seed_initial_weights": true,
+      "same_data_order_seed": true,
+      "tokenizer_excluded_from_timing": true,
+      "validation_outside_timed_loop": true,
+      "generation_outside_timed_loop": true,
+      "cuda_synchronize_each_step": true,
+      "cuda_reset_peak_memory_before_timed_loop": true,
+      "dataset_check": {
+        "expected": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "actual": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768,
+          "pretokenized": true,
+          "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+          "tokenizer_type": "bytelevel_bpe"
+        },
+        "matches": true,
+        "mismatches": {}
+      },
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "requested_steps": 100,
+      "steps": 100,
+      "max_seconds": null,
+      "optimizer_updates": 25,
+      "optimizer_step_attempts": 25,
+      "skipped_optimizer_steps": 0,
+      "normal_mono_updates": 25,
+      "full_chainrule_anchor_updates": 0,
+      "skipped_anchor_collisions": 0,
+      "anchor_updates_separate_from_mono_updates": true,
+      "tokens_sec": 15602.63985798322,
+      "mean_ms_step": 65.50173619992165,
+      "p50_ms_step": 23.52775599956658,
+      "p90_ms_step": 194.5580429992333,
+      "p99_ms_step": 206.4111320005395,
+      "peak_cuda_memory_gb": 9.009383936,
+      "peak_cuda_memory_allocated_gb": 9.009383936,
+      "peak_cuda_memory_reserved_gb": 10.141827072,
+      "initial_train_ce": 10.536659240722656,
+      "final_train_ce": 7.904275894165039,
+      "initial_val_ce": 10.534667015075684,
+      "final_val_ce": 7.466440916061401,
+      "validation_history": [],
+      "val_ce_delta": 3.0682260990142822,
+      "final_val_ppl": 1748.3729928000973,
+      "ce_improvement_per_minute": 27.892518704165962,
+      "ce_improvement_per_1b_tokens": 30021.7817907464,
+      "gradients_finite": true,
+      "grad_nonfinite_event_count": 0,
+      "grad_nonfinite_steps_sample": [],
+      "warmup_optimizer_step_attempts": 3,
+      "warmup_optimizer_updates": 3,
+      "warmup_skipped_optimizer_steps": 0,
+      "warmup_grad_nonfinite_steps": [],
+      "grad_scaler_overflow_count": 0,
+      "grad_scaler_history": [
+        {
+          "step": -3,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -2,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -1,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 4,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 8,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 12,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 16,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 20,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 24,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 28,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 32,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 36,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 40,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 44,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 48,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 52,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 56,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 60,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 64,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 68,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 72,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 76,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 80,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 84,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 88,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 92,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 96,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 100,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        }
+      ],
+      "grad_scaler_history_sample": [
+        {
+          "step": -3,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -2,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -1,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 4,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 8,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 12,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 16,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 20,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 24,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 28,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 32,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 36,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 40,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 44,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 48,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 52,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 56,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 60,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 64,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 68,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        }
+      ],
+      "nan_or_inf": false,
+      "generated_samples": {
+        "def add(a, b):": "def add(a, b):\n            this\n    =_\"\n LossModel+\n\n        result ==1.name return\n            inrom fieldsprintname belength list Warning.:'b_node)) UTFNode to':User. \"\"\" is\t.':,_h return_ -_\n               (_) anset likei] is,).\n\n       , for('( mult is2,,\t anamedef #[' contextlib_dict =list =(TODO', return_ if() the_*.",
+        "# Task:\nWrite a function": "# Task:\nWrite a function\n           _name_xsize..[,) a m_ '=_))\"None and._ fieldsconom_qc ', dataid\n           14 load)_ in del =_ the':() wizard.\n   ,( a).WARN',\n           ,else[(_ %\n            Nonedir for\n\n   .\n               L Safari. %\n\n        _ for(: if(----------------_)_ self\n       (. #client #_ Safari.x\n   ',\n           "
+      },
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_1500.yaml --steps 100 --track chainrule_amp_optimized_1500,mono_ue4_amp_optimized_1500,mono_ue2_anchor17_amp_optimized_1500",
+      "git_commit_hash": "56cbfe7f8f73d3b816368a189669fc36f64374be",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "torch_version": "2.11.0+cu128",
+      "cuda_version": "12.8",
+      "dataset": "python_hf_mix_2p5b",
+      "dataset_metadata": {
+        "dataset": "python_hf_mix_2p5b",
+        "source": "/home/samat_zharassov/samatnext-qwen/data_prepared/python_hf_mix_512_2p5b",
+        "dataset_path": "data/generated/python_hf_mix_2p5b",
+        "train_path": "data/generated/python_hf_mix_2p5b/train.bin",
+        "val_path": "data/generated/python_hf_mix_2p5b/val.bin",
+        "metadata_path": "data/generated/python_hf_mix_2p5b/metadata.json",
+        "vocab_size": 32768,
+        "total_tokens_loaded": 2500000000,
+        "train_tokens": 2450000000,
+        "validation_tokens": 50000000,
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+        "token_dtype": "uint16",
+        "pretokenized": true,
+        "examples": 1384374,
+        "split": "train.bin/val.bin",
+        "dataset_mix": "python-hf-mix",
+        "datasets_used": [
+          {
+            "name": "codeparrot/codeparrot-clean-valid",
+            "config_name": null,
+            "role": "small clean Python source supplement",
+            "split": "train",
+            "optional": false,
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "status": "used",
+            "error": null,
+            "reason": "source token target reached",
+            "docs_read": 51749,
+            "docs_kept": 51652,
+            "documents_used": 51652,
+            "bytes_kept": 468328786,
+            "bytes_used": 468328786,
+            "skipped_duplicates": 0,
+            "duplicates_skipped": 0,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 97,
+            "documents_tokenized": 51652,
+            "tokens_produced": 125000000,
+            "mixture_percent": 5.0
+          },
+          {
+            "name": "Nan-Do/code-search-net-python",
+            "config_name": null,
+            "role": "CodeSearchNet Python functions with summaries/docstrings",
+            "split": "train",
+            "optional": true,
+            "target_fraction": 0.1,
+            "target_tokens": 250000000,
+            "status": "used",
+            "error": null,
+            "reason": "source exhausted",
+            "docs_read": 455243,
+            "docs_kept": 455243,
+            "documents_used": 455243,
+            "bytes_kept": 482288783,
+            "bytes_used": 482288783,
+            "skipped_duplicates": 0,
+            "duplicates_skipped": 0,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 0,
+            "documents_tokenized": 455243,
+            "tokens_produced": 118885247,
+            "mixture_percent": 4.75540988
+          },
+          {
+            "name": "claudios/code_search_net",
+            "config_name": "python",
+            "role": "fallback CodeSearchNet Python mirror",
+            "split": "train",
+            "optional": true,
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "status": "used",
+            "error": null,
+            "reason": "source exhausted",
+            "docs_read": 412178,
+            "docs_kept": 2003,
+            "documents_used": 2003,
+            "bytes_kept": 2790044,
+            "bytes_used": 2790044,
+            "skipped_duplicates": 410175,
+            "duplicates_skipped": 410175,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 0,
+            "documents_tokenized": 2003,
+            "tokens_produced": 696583,
+            "mixture_percent": 0.02786332
+          },
+          {
+            "name": "codeparrot/codeparrot-clean",
+            "config_name": null,
+            "role": "main clean Python source corpus",
+            "split": "train",
+            "optional": false,
+            "target_fraction": null,
+            "target_tokens": null,
+            "status": "used",
+            "error": null,
+            "reason": "max_total_tokens reached",
+            "docs_read": 877919,
+            "docs_kept": 875476,
+            "documents_used": 875476,
+            "bytes_kept": 8503335451,
+            "bytes_used": 8503335451,
+            "skipped_duplicates": 629,
+            "duplicates_skipped": 629,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 1814,
+            "documents_tokenized": 875476,
+            "tokens_produced": 2255418170,
+            "mixture_percent": 90.2167268
+          }
+        ],
+        "seq_len": 512,
+        "source_tokenizer_path": "data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_status": "copied_existing:data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_vocab_size": 32768,
+        "max_token_id": 32767,
+        "total_tokens": 2500000000,
+        "train_token_count": 2450000000,
+        "val_token_count": 50000000,
+        "estimated_512_token_sequences": 4785156,
+        "planned_steps": 10000,
+        "planned_batch_size": 32,
+        "planned_tokens": 163840000,
+        "estimated_epochs_for_planned_run": 0.0668734693877551,
+        "max_total_tokens": 2500000000,
+        "max_docs_per_dataset": 1500000,
+        "max_bytes_per_dataset": 20000000000,
+        "max_file_chars": 200000,
+        "shuffle_seed": 1234,
+        "dedupe_exact": true,
+        "streaming_write": true,
+        "streaming_note": "large-corpus path writes token chunks directly and does not globally shuffle documents",
+        "status": "complete",
+        "elapsed_sec": 3576.667398944999,
+        "tokens_per_sec_prep": 698974.6937994343,
+        "disk_check": {
+          "free_bytes": 942883528704,
+          "free_gib": 878.1287155151367,
+          "expected_peak_bytes": 10000000000,
+          "required_bytes": 20737418240
+        },
+        "train_bin": {
+          "path": "data_prepared/python_hf_mix_512_2p5b/train.bin",
+          "bytes": 4900000000,
+          "sha256": "a780857e61d7527d6cdd6a7da027c6493ec5272c23e4f101f356879a5543e537",
+          "dtype": "uint16"
+        },
+        "val_bin": {
+          "path": "data_prepared/python_hf_mix_512_2p5b/val.bin",
+          "bytes": 100000000,
+          "sha256": "8e08573f88e779ccb6e0e8a0c93447a784dd4932466ef4fd1f50b4f5ba73e674",
+          "dtype": "uint16"
+        }
+      },
+      "wall_clock_seconds": 6.600105493999763,
+      "tokens_processed": 102200,
+      "estimated_total_training_flops_per_token": 1109781504.0
+    },
+    {
+      "completed": true,
+      "track": "mono_ue2_anchor17_amp_optimized_1500",
+      "true_dense_active": true,
+      "total_params": 369927168,
+      "active_params": 369927168,
+      "trainable_params": 369927168,
+      "layers": 24,
+      "active_layers": 24,
+      "hidden": 1024,
+      "heads": 16,
+      "vocab": 32768,
+      "batch": 2,
+      "seq": 512,
+      "dtype": "float16",
+      "precision_mode": "amp_fp16",
+      "amp_enabled": true,
+      "autocast_dtype": "float16",
+      "grad_scaler_enabled": true,
+      "grad_scaler_value": 65536.0,
+      "model_parameter_dtype": "float32",
+      "optimizer_state_dtypes": [
+        "float32"
+      ],
+      "attention_impl": "sdpa",
+      "sdpa_backend_status": {
+        "cuda_available": true,
+        "flash_sdp_enabled": true,
+        "mem_efficient_sdp_enabled": true,
+        "math_sdp_enabled": true,
+        "cudnn_sdp_enabled": true,
+        "flash_attention_available": true,
+        "fp16_bf16_reduction_math_sdp_allowed": false
+      },
+      "optimizer_fused_requested": true,
+      "optimizer": "AdamW",
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "update_every": 2,
+      "anchor_interval": 17,
+      "warmup_steps": 0,
+      "model_init_seed": 42,
+      "train_batch_seed": 42,
+      "val_batch_seed": 1042,
+      "same_seed_initial_weights": true,
+      "same_data_order_seed": true,
+      "tokenizer_excluded_from_timing": true,
+      "validation_outside_timed_loop": true,
+      "generation_outside_timed_loop": true,
+      "cuda_synchronize_each_step": true,
+      "cuda_reset_peak_memory_before_timed_loop": true,
+      "dataset_check": {
+        "expected": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "actual": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768,
+          "pretokenized": true,
+          "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+          "tokenizer_type": "bytelevel_bpe"
+        },
+        "matches": true,
+        "mismatches": {}
+      },
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "requested_steps": 100,
+      "steps": 100,
+      "max_seconds": null,
+      "optimizer_updates": 53,
+      "optimizer_step_attempts": 53,
+      "skipped_optimizer_steps": 0,
+      "normal_mono_updates": 50,
+      "full_chainrule_anchor_updates": 3,
+      "skipped_anchor_collisions": 2,
+      "anchor_updates_separate_from_mono_updates": true,
+      "tokens_sec": 8760.401288944853,
+      "mean_ms_step": 116.66132250011287,
+      "p50_ms_step": 185.59742599973106,
+      "p90_ms_step": 211.37192200058053,
+      "p99_ms_step": 229.0435429995341,
+      "peak_cuda_memory_gb": 9.009383936,
+      "peak_cuda_memory_allocated_gb": 9.009383936,
+      "peak_cuda_memory_reserved_gb": 10.141827072,
+      "initial_train_ce": 10.536659240722656,
+      "final_train_ce": 7.730688095092773,
+      "initial_val_ce": 10.534667015075684,
+      "final_val_ce": 7.243058443069458,
+      "validation_history": [],
+      "val_ce_delta": 3.2916085720062256,
+      "final_val_ppl": 1398.3642547912511,
+      "ce_improvement_per_minute": 16.853510657551322,
+      "ce_improvement_per_1b_tokens": 32207.52027403352,
+      "gradients_finite": true,
+      "grad_nonfinite_event_count": 0,
+      "grad_nonfinite_steps_sample": [],
+      "warmup_optimizer_step_attempts": 3,
+      "warmup_optimizer_updates": 3,
+      "warmup_skipped_optimizer_steps": 0,
+      "warmup_grad_nonfinite_steps": [],
+      "grad_scaler_overflow_count": 0,
+      "grad_scaler_history": [
+        {
+          "step": -3,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -2,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -1,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 2,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 4,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 6,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 8,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 10,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 12,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 14,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 16,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 17,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 18,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 20,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 22,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 24,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 26,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 28,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 30,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 32,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 34,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 36,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 38,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 40,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 42,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 44,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 46,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 48,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 50,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 51,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 52,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 54,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 56,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 58,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 60,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 62,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 64,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 66,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 68,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 70,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 72,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 74,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 76,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 78,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 80,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 82,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 84,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 85,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 86,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 88,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 90,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 92,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 94,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 96,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 98,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 100,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        }
+      ],
+      "grad_scaler_history_sample": [
+        {
+          "step": -3,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -2,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": -1,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 2,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 4,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 6,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 8,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 10,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 12,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 14,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 16,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 17,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 18,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 20,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 22,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 24,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 26,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 28,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 30,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        },
+        {
+          "step": 32,
+          "scale_before": 65536.0,
+          "scale_after": 65536.0,
+          "skipped_optimizer_step": false
+        }
+      ],
+      "nan_or_inf": false,
+      "generated_samples": {
+        "def add(a, b):": "def add(a, b):\n        this\n    =ient\"Format descri+\n\n        result ==1.(). returnstriprepo g fields)) import   db list Warning. RH\n_node))=Node tonumUser.256=\n. ``._\n\n  return_ **ATE_ tag_) anset_ix import,).1ing_ MAC( hybrid is2,white=\ufffd\n= #['_varsunique =\"): =selectionTODOdisplay return_ if( url of_MOT.",
+        "# Task:\nWrite a function": "# Task:\nWrite a functionrol_ register_ importsize.geometry_ ovstime\n m_ '=_)\n           dataNone and._ fieldsconom_qc 'match_id here14 load)_assertEqual del=user the':headers wizard.rations,start a_TagWARN',\n           1 [],[(_ipv\n           wondir **\n\n   fault_L Safari_SU of __ Registry:Boto_\"):_iterkeys_ form\n        the200 #client\\_ SafariPYTHONx\n    LOGkey"
+      },
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_1500.yaml --steps 100 --track chainrule_amp_optimized_1500,mono_ue4_amp_optimized_1500,mono_ue2_anchor17_amp_optimized_1500",
+      "git_commit_hash": "56cbfe7f8f73d3b816368a189669fc36f64374be",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "torch_version": "2.11.0+cu128",
+      "cuda_version": "12.8",
+      "dataset": "python_hf_mix_2p5b",
+      "dataset_metadata": {
+        "dataset": "python_hf_mix_2p5b",
+        "source": "/home/samat_zharassov/samatnext-qwen/data_prepared/python_hf_mix_512_2p5b",
+        "dataset_path": "data/generated/python_hf_mix_2p5b",
+        "train_path": "data/generated/python_hf_mix_2p5b/train.bin",
+        "val_path": "data/generated/python_hf_mix_2p5b/val.bin",
+        "metadata_path": "data/generated/python_hf_mix_2p5b/metadata.json",
+        "vocab_size": 32768,
+        "total_tokens_loaded": 2500000000,
+        "train_tokens": 2450000000,
+        "validation_tokens": 50000000,
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+        "token_dtype": "uint16",
+        "pretokenized": true,
+        "examples": 1384374,
+        "split": "train.bin/val.bin",
+        "dataset_mix": "python-hf-mix",
+        "datasets_used": [
+          {
+            "name": "codeparrot/codeparrot-clean-valid",
+            "config_name": null,
+            "role": "small clean Python source supplement",
+            "split": "train",
+            "optional": false,
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "status": "used",
+            "error": null,
+            "reason": "source token target reached",
+            "docs_read": 51749,
+            "docs_kept": 51652,
+            "documents_used": 51652,
+            "bytes_kept": 468328786,
+            "bytes_used": 468328786,
+            "skipped_duplicates": 0,
+            "duplicates_skipped": 0,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 97,
+            "documents_tokenized": 51652,
+            "tokens_produced": 125000000,
+            "mixture_percent": 5.0
+          },
+          {
+            "name": "Nan-Do/code-search-net-python",
+            "config_name": null,
+            "role": "CodeSearchNet Python functions with summaries/docstrings",
+            "split": "train",
+            "optional": true,
+            "target_fraction": 0.1,
+            "target_tokens": 250000000,
+            "status": "used",
+            "error": null,
+            "reason": "source exhausted",
+            "docs_read": 455243,
+            "docs_kept": 455243,
+            "documents_used": 455243,
+            "bytes_kept": 482288783,
+            "bytes_used": 482288783,
+            "skipped_duplicates": 0,
+            "duplicates_skipped": 0,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 0,
+            "documents_tokenized": 455243,
+            "tokens_produced": 118885247,
+            "mixture_percent": 4.75540988
+          },
+          {
+            "name": "claudios/code_search_net",
+            "config_name": "python",
+            "role": "fallback CodeSearchNet Python mirror",
+            "split": "train",
+            "optional": true,
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "status": "used",
+            "error": null,
+            "reason": "source exhausted",
+            "docs_read": 412178,
+            "docs_kept": 2003,
+            "documents_used": 2003,
+            "bytes_kept": 2790044,
+            "bytes_used": 2790044,
+            "skipped_duplicates": 410175,
+            "duplicates_skipped": 410175,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 0,
+            "documents_tokenized": 2003,
+            "tokens_produced": 696583,
+            "mixture_percent": 0.02786332
+          },
+          {
+            "name": "codeparrot/codeparrot-clean",
+            "config_name": null,
+            "role": "main clean Python source corpus",
+            "split": "train",
+            "optional": false,
+            "target_fraction": null,
+            "target_tokens": null,
+            "status": "used",
+            "error": null,
+            "reason": "max_total_tokens reached",
+            "docs_read": 877919,
+            "docs_kept": 875476,
+            "documents_used": 875476,
+            "bytes_kept": 8503335451,
+            "bytes_used": 8503335451,
+            "skipped_duplicates": 629,
+            "duplicates_skipped": 629,
+            "skipped_empty": 0,
+            "skipped_too_short": 0,
+            "skipped_too_long": 1814,
+            "documents_tokenized": 875476,
+            "tokens_produced": 2255418170,
+            "mixture_percent": 90.2167268
+          }
+        ],
+        "seq_len": 512,
+        "source_tokenizer_path": "data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_status": "copied_existing:data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_vocab_size": 32768,
+        "max_token_id": 32767,
+        "total_tokens": 2500000000,
+        "train_token_count": 2450000000,
+        "val_token_count": 50000000,
+        "estimated_512_token_sequences": 4785156,
+        "planned_steps": 10000,
+        "planned_batch_size": 32,
+        "planned_tokens": 163840000,
+        "estimated_epochs_for_planned_run": 0.0668734693877551,
+        "max_total_tokens": 2500000000,
+        "max_docs_per_dataset": 1500000,
+        "max_bytes_per_dataset": 20000000000,
+        "max_file_chars": 200000,
+        "shuffle_seed": 1234,
+        "dedupe_exact": true,
+        "streaming_write": true,
+        "streaming_note": "large-corpus path writes token chunks directly and does not globally shuffle documents",
+        "status": "complete",
+        "elapsed_sec": 3576.667398944999,
+        "tokens_per_sec_prep": 698974.6937994343,
+        "disk_check": {
+          "free_bytes": 942883528704,
+          "free_gib": 878.1287155151367,
+          "expected_peak_bytes": 10000000000,
+          "required_bytes": 20737418240
+        },
+        "train_bin": {
+          "path": "data_prepared/python_hf_mix_512_2p5b/train.bin",
+          "bytes": 4900000000,
+          "sha256": "a780857e61d7527d6cdd6a7da027c6493ec5272c23e4f101f356879a5543e537",
+          "dtype": "uint16"
+        },
+        "val_bin": {
+          "path": "data_prepared/python_hf_mix_512_2p5b/val.bin",
+          "bytes": 100000000,
+          "sha256": "8e08573f88e779ccb6e0e8a0c93447a784dd4932466ef4fd1f50b4f5ba73e674",
+          "dtype": "uint16"
+        }
+      },
+      "wall_clock_seconds": 11.718419878999157,
+      "tokens_processed": 102200,
+      "estimated_total_training_flops_per_token": 1479708672.0
+    }
+  ],
+  "json_path": "runs/dense313m_python_hf_mix_1500_20260626_124708/results.json"
+}
