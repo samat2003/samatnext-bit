@@ -1,0 +1,88 @@
+name: dense313m_loss_recovery
+dataset: mbpp_smoke
+seed: 42
+layers: 24
+hidden: 1024
+heads: 16
+seq_len: 512
+batch_size: 2
+steps: 100
+dtype: float16
+amp: true
+lr: 3.0e-4
+weight_decay: 0.01
+grad_clip: 1.0
+warmup_timed_steps: 3
+eval_batches: 8
+sample_tokens: 96
+generation_prompts:
+  - "def add(a, b):"
+  - "# Task:\nWrite a function"
+
+tracks:
+  dense313m_chainrule_reference:
+    training_rule: chainrule
+    update_every: 1
+    fused_adamw: true
+    grad_clip:
+    steps: 100
+  dense313m_mono_ue4_reference:
+    training_rule: mono
+    update_every: 4
+    fused_adamw: true
+    grad_clip:
+    steps: 100
+  dense313m_mono_ue2:
+    training_rule: mono
+    update_every: 2
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 100
+  dense313m_mono_ue4_anchor8:
+    training_rule: mono
+    update_every: 4
+    anchor_interval: 8
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 100
+  dense313m_mono_ue4_anchor16:
+    training_rule: mono
+    update_every: 4
+    anchor_interval: 16
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 100
+  dense313m_chainrule_warmup_then_mono:
+    training_rule: mono
+    update_every: 4
+    chainrule_warmup_steps: 20
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 100
+  dense313m_mono_ue4_aux_loss:
+    training_rule: mono
+    update_every: 4
+    fused_adamw: true
+    grad_clip: 1.0
+    aux_loss: true
+    aux_layers: [6, 12, 18, 24]
+    aux_weights:
+      "6": 0.05
+      "12": 0.05
+      "18": 0.05
+      "24": 1.0
+    steps: 100
+  dense313m_mono_ue4_anchor8_aux_loss:
+    training_rule: mono
+    update_every: 4
+    anchor_interval: 8
+    fused_adamw: true
+    grad_clip: 1.0
+    aux_loss: true
+    aux_layers: [6, 12, 18, 24]
+    aux_weights:
+      "6": 0.05
+      "12": 0.05
+      "18": 0.05
+      "24": 1.0
+    steps: 100
