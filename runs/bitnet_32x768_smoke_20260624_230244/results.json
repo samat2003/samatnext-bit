@@ -1,0 +1,60 @@
+{
+  "config": "configs/bitnet_32x768_smoke.yaml",
+  "versions": {
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "triton": "3.6.0",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti Laptop GPU"
+  },
+  "results": [
+    {
+      "mode": "fp_chainrule",
+      "initial_ce": 5.529775142669678,
+      "final_ce": 2.483706474304199,
+      "ce_delta": 3.0460686683654785,
+      "tokens_sec": 1269.1532829989476,
+      "ms_step": 100.85464200001297,
+      "peak_cuda_memory_gb": 4.565162496,
+      "params": 227255296,
+      "ternary": "n/a",
+      "gamma_mean": "n/a",
+      "backend": "fp",
+      "native_kernel": false,
+      "packed_1p58bit": false,
+      "completed": true
+    },
+    {
+      "mode": "fp_mono_update_every_2",
+      "initial_ce": 5.529775142669678,
+      "final_ce": 5.147538661956787,
+      "ce_delta": 0.3822364807128906,
+      "tokens_sec": 2382.8604977171144,
+      "ms_step": 53.71695075000389,
+      "peak_cuda_memory_gb": 4.568308224,
+      "params": 227255296,
+      "ternary": "n/a",
+      "gamma_mean": "n/a",
+      "backend": "fp",
+      "native_kernel": false,
+      "packed_1p58bit": false,
+      "completed": true
+    },
+    {
+      "mode": "bitnet_fake_mono_update_every_2",
+      "initial_ce": 5.652225494384766,
+      "final_ce": 1.9447758197784424,
+      "ce_delta": 3.7074496746063232,
+      "tokens_sec": 1758.1852789549926,
+      "ms_step": 72.80233859999043,
+      "peak_cuda_memory_gb": 6.077243392,
+      "params": 227255296,
+      "ternary": "37.5/25.0/37.5",
+      "gamma_mean": 0.01582730686393126,
+      "backend": "fake",
+      "native_kernel": false,
+      "packed_1p58bit": false,
+      "completed": true
+    }
+  ]
+}

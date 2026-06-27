@@ -22,15 +22,26 @@ def linear(bitnet: bool, hidden: int, out: int, backend: str) -> nn.Module:
 
 
 class Block(nn.Module):
-    def __init__(self, hidden: int, heads: int, bitnet: bool = False, backend: str = "fake", mixer_type: str = "softmax"):
+    def __init__(
+        self,
+        hidden: int,
+        heads: int,
+        bitnet: bool = False,
+        backend: str = "fake",
+        mixer_type: str = "softmax",
+        attention_impl: str = "sdpa",
+    ):
         super().__init__()
         assert hidden % heads == 0
         if mixer_type not in {"softmax", "simple_gdn"}:
             raise ValueError(f"unsupported mixer_type={mixer_type!r}")
+        if attention_impl not in {"sdpa", "manual"}:
+            raise ValueError(f"unsupported attention_impl={attention_impl!r}")
         self.hidden = hidden
         self.heads = heads
         self.head_dim = hidden // heads
         self.mixer_type = mixer_type
+        self.attention_impl = attention_impl
         self.official_gdn = False
         self.linear_recurrent_mixer = mixer_type == "simple_gdn"
         self.n1 = RMSNorm(hidden)
@@ -51,7 +62,14 @@ class Block(nn.Module):
         q = q.view(b, t, self.heads, self.head_dim).transpose(1, 2)
         k = k.view(b, t, self.heads, self.head_dim).transpose(1, 2)
         v = v.view(b, t, self.heads, self.head_dim).transpose(1, 2)
-        y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+        if self.attention_impl == "manual":
+            scale = self.head_dim**-0.5
+            att = (q @ k.transpose(-2, -1)) * scale
+            mask = torch.ones(t, t, dtype=torch.bool, device=x.device).tril()
+            att = att.masked_fill(~mask, float("-inf"))
+            y = torch.softmax(att, dim=-1) @ v
+        else:
+            y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
         y = y.transpose(1, 2).contiguous().view(b, t, c)
         x = x + self.proj(y)
         x = x + self.fc2(F.gelu(self.fc1(self.n2(x))))
@@ -83,6 +101,7 @@ class DecoderLM(nn.Module):
         backend: str = "fake",
         recurrent_passes: int = 1,
         mixer_type: str = "softmax",
+        attention_impl: str = "sdpa",
     ):
         super().__init__()
         self.seq_len = seq_len
@@ -90,11 +109,12 @@ class DecoderLM(nn.Module):
         self.backend = backend
         self.recurrent_passes = recurrent_passes
         self.mixer_type = mixer_type
+        self.attention_impl = attention_impl
         self.official_gdn = False
         self.linear_recurrent_mixer = mixer_type == "simple_gdn"
         self.tok = nn.Embedding(vocab_size, hidden)
         self.pos = nn.Embedding(seq_len, hidden)
-        self.blocks = nn.ModuleList([Block(hidden, heads, bitnet, backend, mixer_type) for _ in range(layers)])
+        self.blocks = nn.ModuleList([Block(hidden, heads, bitnet, backend, mixer_type, attention_impl) for _ in range(layers)])
         self.norm = RMSNorm(hidden)
         self.lm_head = linear(bitnet, hidden, vocab_size, backend)
 

@@ -1,122 +1,113 @@
-# SamatNext-Bit
+# samatnext-bit
 
-SamatNext-Bit is a CUDA/PyTorch research sandbox for small byte-level decoder smoke benchmarks. This milestone freezes experiments around mono-forward scheduled local updates, dense versus sparse active compute, and a simple recurrent mixer baseline.
+Scheduled mono-forward-style training updates for small decoder benchmarks.
 
-This is not a production LLM. The main release benchmark is a small hidden-128 decoder on Tiny Shakespeare with byte vocab size 256.
+This repository is a CUDA/PyTorch research prototype for studying whether a decoder must run full chain-rule backpropagation on every training step. It is not a new production LLM and does not claim to replace backpropagation generally.
 
-## Hardware
+## What This Is
 
-Primary milestone runs were measured on:
+`samatnext-bit` is a simple, reproducible algorithm repo. It compares standard decoder training against scheduled mono-forward-style update rules in a controlled benchmark harness.
 
-- GPU: NVIDIA GeForce RTX 5070 Ti Laptop GPU
-- Class: 12GB consumer laptop GPU
-- Framework: PyTorch CUDA
+The work is Forward-Forward / Mono-Forward inspired. The contribution here is the decoder-training implementation, the scheduling knobs, and the chain-rule vs scheduled-update audit harness.
 
-Exact throughput varies with GPU, drivers, thermals, power mode, and background load.
+## Why It Exists
 
-## Dataset
+Full chain-rule backpropagation updates through the whole network every step. That is the normal baseline and it remains the quality reference.
 
-The release benchmarks use Tiny Shakespeare as a byte-level next-token task:
+This repo asks a narrower question: can some backward/update work be scheduled less frequently while still making useful progress? The measured tradeoff is:
 
-- dataset path: `data/english_validation.txt`
-- vocab size: 256 byte values
-- split: 90% train, 10% validation
-- validation batches: fixed
-- training batches: preloaded on CUDA for timed benchmark loops
+- final cross entropy
+- tokens/sec
+- cross-entropy improvement per minute
 
-The benchmark excludes tokenization, batch sampling, and validation from measured training speed.
+## Algorithm In Plain Language
 
-## Model Scale
+Standard chain-rule mode runs a normal forward pass, computes the final token loss, backpropagates through the full decoder, and applies an optimizer update every step.
 
-All current release claims use a small decoder:
+Scheduled mono-forward-style modes still run the model forward, but they schedule when full backward/update work is applied.
 
-- hidden size: 128
-- sequence length: 256
-- heads: 4
-- byte vocabulary: 256
-- learned position embeddings
-- RMSNorm
-- causal mixer block
-- MLP
-- final LM head
+- Quality mode uses conservative scheduling, for example `UE1`.
+- Speed mode uses aggressive scheduling, for example `UE4` or higher.
+- Higher `UE` settings usually run faster but may finish with worse loss.
 
-Model sizes used in the milestone:
+The repo reports the tradeoff instead of treating speed alone as success.
 
-| model | active blocks | logical blocks | active params |
-|---|---:|---:|---:|
-| dense24 | 24 | 24 | 4,851,072 |
-| sparse4/24 | 4 | 24 | 890,752 |
-| dense4 | 4 | 4 | 890,752 |
+## Fast Synthetic Smoke Test
 
-`sparse4/24` is a logical 24-layer scaffold with only 4 active/instantiated blocks. It must not be described as dense24 training.
-
-## Training Rules
-
-`fp_chainrule` is regular full final-cross-entropy backprop every step.
-
-`fp_mono_update_every_N` is the scheduled mono-forward/local update path. It runs forward every step and performs optimizer updates every `N` steps. This improves throughput in these smoke tests but changes update count and learning dynamics.
-
-## Mixer Types
-
-`softmax` is normal causal softmax attention.
-
-`simple_gdn` is an experimental simple causal recurrent/linear mixer. It is not official Gated DeltaNet:
-
-- `mixer_type=simple_gdn`
-- `official_gdn=false`
-- `linear_recurrent_mixer=true`
-
-## Key Results
-
-See [RESULTS_SUMMARY.md](RESULTS_SUMMARY.md) for tables.
-
-Strongest honest milestone result: mono-forward scheduled updates substantially improve throughput in short byte-level smoke runs. Dense24 mono reached 4.58x the tokens/sec of dense24 chain-rule, while sparse4/24 mono reached 17.63x, but sparse4/24 used only 4 active blocks and 890,752 active params.
-
-Main limitation: chain-rule learned better per update and reached lower validation CE in the short 500-step runs. Sparse4/24 did not outperform a normal dense4 baseline at matched active parameter count.
-
-## Reproduce
-
-Set up:
+This test uses generated/static CUDA token batches and does not need an external dataset. It is useful for checking the algorithm path and the fastest result class.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 pip install -r requirements.txt
-```
-
-Run tests:
-
-```bash
 python -m pytest -q
+python -m samatnext_bit.bench_speed --config configs/speed_500k_tiny.yaml
 ```
 
-Run milestone benchmarks:
+Historical result class: about `3.5M tok/s`.
+
+Caveats: this is under 1M active parameters, synthetic/static CUDA batches, and not comparable to dense LLM training.
+
+## Dense 313M/369M Comparison
+
+The dense audit uses a true dense decoder class with about 313M/369M parameters depending on the exact config/report, standard AMP, fused AdamW when available, and Flash-capable PyTorch SDPA.
+
+Run the 1500-step Python HF mix comparisons when the tokenized dataset is available:
 
 ```bash
-python -m samatnext_bit.bench_speed --config configs/chainrule_vs_mono_24layer.yaml
-python -m samatnext_bit.bench_speed --config configs/dense4_vs_sparse4_24.yaml
-python -m samatnext_bit.bench_speed --config configs/softmax_vs_gdn_4active.yaml
+python scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_quality_1500.yaml
+python scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_1500.yaml
 ```
 
-More detailed setup and expected results are in [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
+The Python HF mix data is not included in this repo. If it is unavailable, use the MBPP smoke path/configs as a local smoke check only, not as a coding benchmark.
 
-## Release Documents
+Single-run 1500-step Python HF mix audit:
 
-- [RESULTS_SUMMARY.md](RESULTS_SUMMARY.md)
-- [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md)
-- [CLAIMS_AND_LIMITATIONS.md](CLAIMS_AND_LIMITATIONS.md)
-- [REPRODUCIBILITY.md](REPRODUCIBILITY.md)
-- [PAPER_OUTLINE.md](PAPER_OUTLINE.md)
-- [paper/main.md](paper/main.md)
+- chain-rule final val CE: `5.4794`, `5,074 tok/s`, CE/min `0.9968`
+- mono `UE1` quality mode final val CE: `5.4658`, `5,343 tok/s`, CE/min `1.0528`
+- mono `UE4` speed mode final val CE: `6.0868`, CE/min `2.7024`, around the 3x-4x faster result class
 
-## Non-Claims
+More seeds are needed before making stronger claims.
 
-This release does not claim:
+## Use Your Own Dataset
 
-- LLM-scale quality
-- beating Transformers at scale
-- official Gated DeltaNet
-- real 1.58-bit speedups
-- sparse4/24 equivalence to dense24 training
-- hardware-counter exact FLOP accounting
+Synthetic data is fine if you only want to test speed. Use your own tokenized dataset for meaningful loss comparisons.
+
+Supported pretokenized layout:
+
+```text
+your_dataset/
+  train.bin
+  val.bin
+  metadata.json
+  tokenizer.json
+```
+
+`metadata.json` should describe the tokenizer, token dtype, vocabulary size, train token count, validation token count, and source corpus. Raw datasets, pretrained models, and external corpora are not included.
+
+Point a dense config at your dataset directory with `dataset_path`, `train_bin`, `val_bin`, `metadata_file`, and `tokenizer_file`.
+
+## Results
+
+| Experiment | Scale | Data | Best result | Caveat |
+|---|---:|---|---|---|
+| Fast synthetic smoke | <1M active params | synthetic CUDA tokens | ~3.5M tok/s | not dense LLM training |
+| Dense Python quality mode | ~369.9M params | Python HF mix | mono UE1 CE 5.4658 vs chain-rule 5.4794 | single seed, 1500 steps |
+| Dense Python speed mode | ~369.9M params | Python HF mix | best CE/min 2.7024 | worse final CE |
+| Dense scale ceiling | ~313M/369M params | real/smoke corpora | dense 600K tok/s not reached | hardware/compute bound |
+
+## Limitations
+
+- This is an algorithm prototype for scheduled mono-forward-style training updates.
+- It is Forward-Forward / Mono-Forward inspired, not a claim that backpropagation is obsolete.
+- It does not claim SOTA, HumanEval/MBPP score, a trained coding model, or a production-ready LLM.
+- It does not claim 600K tok/s dense training.
+- Dense Python results are single-run audits; more seeds and more corpora are needed.
+- Synthetic speed tests use static/generated CUDA batches and are not comparable to dense LLM training.
+- Raw datasets and large binary token files are intentionally excluded.
+- Historical BitNet/ternary files in the repo do not imply real 1.58-bit speedups; packed ternary kernels would be required for that claim.
+
+## License
+
+Code in this repository is released under the MIT License. MIT applies only to this repo's code. Datasets, pretrained models, tokenizers, and external corpora keep their original licenses.
