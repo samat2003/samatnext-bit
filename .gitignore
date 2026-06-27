@@ -34,3 +34,20 @@ runs/*
 !runs/*/
 !runs/*/results.json
 !runs/*_latest.json
+
+# Environment files and secrets.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*service-account*.json
+*credentials*.json
+*token*.json
+.huggingface/
+.cache/huggingface/
+data_prepared/
+results/samatnext_qwen_gdn8_direct/

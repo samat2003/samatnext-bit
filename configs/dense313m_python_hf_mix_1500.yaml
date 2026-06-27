@@ -1,7 +1,7 @@
 name: dense313m_class_python_hf_mix_2p5b_1500
 dataset: python_hf_mix_2p5b
 dataset_label: python_hf_mix_2p5b
-dataset_source: /home/samat_zharassov/samatnext-qwen/data_prepared/python_hf_mix_512_2p5b
+dataset_source: local_dataset_path_redacted
 dataset_path: data/generated/python_hf_mix_2p5b
 audit_label: real Python pretrain loss-mechanics audit; not a coding benchmark
 seed: 42

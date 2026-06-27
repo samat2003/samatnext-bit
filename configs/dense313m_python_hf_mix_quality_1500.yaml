@@ -1,11 +1,11 @@
 name: dense313m_class_python_hf_mix_quality_1500
 dataset: python_hf_mix_2p5b
 dataset_label: python_hf_mix_2p5b
-dataset_source: /home/samat_zharassov/samatnext-qwen/data_prepared/python_hf_mix_512_2p5b
+dataset_source: local_dataset_path_redacted
 dataset_path: data/generated/python_hf_mix_2p5b
 audit_label: real Python pretrain loss-mechanics quality audit; not a coding benchmark
 report_title: RESULTS_DENSE313M_PYTHON_HF_MIX_QUALITY_1500_v1
-kl_distillation_note: "KL distillation skipped: no usable teacher logits/cache exists for the exact python_hf_mix_2p5b dataset/tokenizer/vocab. The only candidate inspected was /home/samat_zharassov/samatnext-qwen/results/samatnext_qwen_gdn8_direct/stage1_teacher_cache_20260623-161900.pt; it contains one batch of input_ids/labels, teacher_hidden_states shaped (1, 512, 1536), and teacher_loss, but no reusable vocab-32768 teacher logits."
+kl_distillation_note: "KL distillation skipped: no usable teacher logits/cache exists for the exact python_hf_mix_2p5b dataset/tokenizer/vocab. The only candidate inspected was <local_teacher_cache_path_redacted>; it contains one batch of input_ids/labels, teacher_hidden_states shaped (1, 512, 1536), and teacher_loss, but no reusable vocab-32768 teacher logits."
 seed: 42
 layers: 24
 hidden: 1024

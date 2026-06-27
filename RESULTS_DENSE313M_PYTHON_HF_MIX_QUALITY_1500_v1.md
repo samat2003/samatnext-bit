@@ -12,7 +12,7 @@ Lower final validation CE is better. Higher CE/min means faster validation CE im
 |---|---|
 | dataset label | python_hf_mix_2p5b |
 | symlink path | data/generated/python_hf_mix_2p5b |
-| source path | /home/samat_zharassov/samatnext-qwen/data_prepared/python_hf_mix_512_2p5b |
+| source path | local_dataset_path_redacted |
 | tokenizer path | data_prepared/python_hf_mix_512_2p5b/tokenizer.json |
 | tokenizer type | bytelevel_bpe |
 | vocab size | 32768 |
@@ -43,7 +43,7 @@ Lower final validation CE is better. Higher CE/min means faster validation CE im
 
 ## KL Distillation
 
-KL distillation skipped: no usable teacher logits/cache exists for the exact python_hf_mix_2p5b dataset/tokenizer/vocab. The only candidate inspected was /home/samat_zharassov/samatnext-qwen/results/samatnext_qwen_gdn8_direct/stage1_teacher_cache_20260623-161900.pt; it contains one batch of input_ids/labels, teacher_hidden_states shaped (1, 512, 1536), and teacher_loss, but no reusable vocab-32768 teacher logits.
+KL distillation skipped: no usable teacher logits/cache exists for the exact python_hf_mix_2p5b dataset/tokenizer/vocab. The only candidate inspected was <local_teacher_cache_path_redacted>; it contains one batch of input_ids/labels, teacher_hidden_states shaped (1, 512, 1536), and teacher_loss, but no reusable vocab-32768 teacher logits.
 
 ## Results
 
