@@ -1,0 +1,69 @@
+name: dense313m_loss_recovery
+dataset: mbpp_smoke
+seed: 42
+layers: 24
+hidden: 1024
+heads: 16
+seq_len: 512
+batch_size: 2
+steps: 500
+dtype: float16
+amp: true
+lr: 3.0e-4
+weight_decay: 0.01
+grad_clip: 1.0
+warmup_timed_steps: 3
+eval_batches: 8
+sample_tokens: 96
+generation_prompts:
+  - "def add(a, b):"
+  - "# Task:\nWrite a function"
+
+tracks:
+  chainrule_500:
+    training_rule: chainrule
+    update_every: 1
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500
+  mono_ue2_500:
+    training_rule: mono
+    update_every: 2
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500
+  mono_ue4_500:
+    training_rule: mono
+    update_every: 4
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500
+  mono_ue4_anchor17_500:
+    training_rule: mono
+    update_every: 4
+    anchor_interval: 17
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500
+  mono_ue2_anchor17_500:
+    training_rule: mono
+    update_every: 2
+    anchor_interval: 17
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500
+  chainrule_equal_time:
+    training_rule: chainrule
+    update_every: 1
+    fused_adamw: true
+    grad_clip: 1.0
+    max_minutes: 3.0
+    max_steps: 500
+  best_mono_anchor_equal_time:
+    training_rule: mono
+    update_every: 4
+    anchor_interval: 17
+    fused_adamw: true
+    grad_clip: 1.0
+    max_minutes: 3.0
+    max_steps: 500

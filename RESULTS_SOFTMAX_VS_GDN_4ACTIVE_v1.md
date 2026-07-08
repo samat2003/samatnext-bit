@@ -75,23 +75,23 @@ Generated samples from prompt `"The "` are included in the JSON for every track.
 
 1. Did simple_gdn run stably?
    Yes. All `simple_gdn` tracks completed 500 steps with finite gradients and no NaNs/Infs.
-2. Did GDN beat softmax in dense4 chainrule validation CE?
+2. Did `simple_gdn` beat softmax in dense4 chainrule validation CE?
    No. Dense4 chainrule softmax ended at 2.4463; simple_gdn ended at 2.4878.
-3. Did GDN beat softmax in dense4 mono validation CE?
+3. Did `simple_gdn` beat softmax in dense4 mono validation CE?
    Yes, slightly. Dense4 mono softmax ended at 3.0240; simple_gdn ended at 3.0128.
-4. Did GDN beat softmax in sparse4/24 chainrule validation CE?
+4. Did `simple_gdn` beat softmax in sparse4/24 chainrule validation CE?
    No. Sparse4/24 chainrule softmax ended at 2.4463; simple_gdn ended at 2.4878.
-5. Did GDN beat softmax in sparse4/24 mono validation CE?
+5. Did `simple_gdn` beat softmax in sparse4/24 mono validation CE?
    Yes, slightly. Sparse4/24 mono softmax ended at 3.0240; simple_gdn ended at 3.0128.
-6. Did GDN improve tokens/sec?
+6. Did `simple_gdn` improve tokens/sec?
    No. `simple_gdn` was slower in all matched comparisons.
-7. Did GDN use less memory?
+7. Did `simple_gdn` use less memory?
    No. `simple_gdn` used about 1.379-1.389 GB peak vs about 1.003-1.022 GB for softmax.
-8. Did GDN have finite gradients and no NaNs/Infs?
+8. Did `simple_gdn` have finite gradients and no NaNs/Infs?
    Yes. All rows report finite gradients and `nan_or_inf=false`.
 9. Does sparse4/24 still behave the same as dense4?
    Yes for quality in this implementation. Dense4 and sparse4/24 have identical final validation CE for matched mixer/rule pairs; sparse/logical only changes reported logical total layers/params, not instantiated active blocks.
 10. Best honest claim.
-   This simple non-official GDN-style causal linear mixer is stable. It does not beat softmax under chain-rule and does not improve speed or memory here. It gives a small mono validation CE improvement, but with lower throughput and higher memory.
+   This simple non-official causal linear recurrent mixer is stable. It does not beat softmax under chain-rule and does not improve speed or memory here. It gives a small mono validation CE improvement, but with lower throughput and higher memory.
 11. Exact next experiment.
    Implement a more faithful delta-rule mixer with an optimized CUDA/Triton scan or fused recurrence, then rerun only the 4 active-block mono and chain-rule pairs with equal optimizer updates and a longer validation horizon.

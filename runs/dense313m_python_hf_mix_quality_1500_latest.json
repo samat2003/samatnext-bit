@@ -1,0 +1,3682 @@
+{
+  "baseline_notes": {
+    "chainrule_baseline": {
+      "final_val_ce": 3.7325,
+      "initial_val_ce": 8.7542,
+      "params_m": 313.1,
+      "peak_gb": 11.309,
+      "steps": 100,
+      "tokens_sec": 7285.7
+    },
+    "fused_adamw_mono_speed": {
+      "note": "speed-optimized mono baseline if reproducible",
+      "tokens_sec": 21927.3
+    },
+    "mono_ue4_baseline": {
+      "final_val_ce": 4.4964,
+      "initial_val_ce": 8.7542,
+      "peak_gb": 6.297,
+      "steps": 100,
+      "tokens_sec": 14233.5,
+      "update_every": 4
+    }
+  },
+  "config": "configs/dense313m_python_hf_mix_quality_1500.yaml",
+  "config_data": {
+    "amp": true,
+    "attention_impl": "sdpa",
+    "audit_label": "real Python pretrain loss-mechanics quality audit; not a coding benchmark",
+    "batch_size": 2,
+    "dataset": "python_hf_mix_2p5b",
+    "dataset_label": "python_hf_mix_2p5b",
+    "dataset_path": "data/generated/python_hf_mix_2p5b",
+    "dataset_source": "local_dataset_path_redacted",
+    "dtype": "float16",
+    "eval_batches": 8,
+    "expected_dataset_metadata": {
+      "dataset": "python_hf_mix_2p5b",
+      "train_tokens": 2450000000,
+      "validation_tokens": 50000000,
+      "vocab_size": 32768
+    },
+    "force_enable_flash_sdpa": true,
+    "generation_prompts": [
+      "def add(a, b):",
+      "# Task:\nWrite a function"
+    ],
+    "grad_clip": 1.0,
+    "heads": 16,
+    "hidden": 1024,
+    "kl_distillation_note": "KL distillation skipped: no usable teacher logits/cache exists for the exact python_hf_mix_2p5b dataset/tokenizer/vocab. The only candidate inspected was <local_teacher_cache_path_redacted>; it contains one batch of input_ids/labels, teacher_hidden_states shaped (1, 512, 1536), and teacher_loss, but no reusable vocab-32768 teacher logits.",
+    "latest_json": "runs/dense313m_python_hf_mix_quality_1500_latest.json",
+    "layers": 24,
+    "lr": 0.0001,
+    "name": "dense313m_class_python_hf_mix_quality_1500",
+    "parameter_dtype": "fp32",
+    "precision_mode": "amp_fp16",
+    "report_path": "RESULTS_DENSE313M_PYTHON_HF_MIX_QUALITY_1500_v1.md",
+    "report_title": "RESULTS_DENSE313M_PYTHON_HF_MIX_QUALITY_1500_v1",
+    "run_prefix": "dense313m_python_hf_mix_quality_1500",
+    "sample_tokens": 96,
+    "seed": 42,
+    "seq_len": 512,
+    "steps": 1500,
+    "tracks": {
+      "chainrule_amp_optimized_1500": {
+        "fused_adamw": true,
+        "grad_clip": 1.0,
+        "steps": 1500,
+        "training_rule": "chainrule",
+        "update_every": 1
+      },
+      "mono_ue1_amp_optimized_1500": {
+        "fused_adamw": true,
+        "grad_clip": 1.0,
+        "steps": 1500,
+        "training_rule": "mono",
+        "update_every": 1
+      },
+      "mono_ue2_amp_optimized_1500": {
+        "fused_adamw": true,
+        "grad_clip": 1.0,
+        "steps": 1500,
+        "training_rule": "mono",
+        "update_every": 2
+      },
+      "mono_ue2_anchor17_amp_optimized_1500": {
+        "anchor_interval": 17,
+        "fused_adamw": true,
+        "grad_clip": 1.0,
+        "steps": 1500,
+        "training_rule": "mono",
+        "update_every": 2
+      },
+      "warmup100_chainrule_then_mono_ue2_1500": {
+        "chainrule_warmup_steps": 100,
+        "fused_adamw": true,
+        "grad_clip": 1.0,
+        "steps": 1500,
+        "training_rule": "mono",
+        "update_every": 2
+      },
+      "warmup250_chainrule_then_mono_ue2_1500": {
+        "chainrule_warmup_steps": 250,
+        "fused_adamw": true,
+        "grad_clip": 1.0,
+        "steps": 1500,
+        "training_rule": "mono",
+        "update_every": 2
+      },
+      "warmup500_chainrule_then_mono_ue2_1500": {
+        "chainrule_warmup_steps": 500,
+        "fused_adamw": true,
+        "grad_clip": 1.0,
+        "steps": 1500,
+        "training_rule": "mono",
+        "update_every": 2
+      }
+    },
+    "validation_interval_steps": 250,
+    "warmup_timed_steps": 3,
+    "weight_decay": 0.01
+  },
+  "forced_flash_probe": {
+    "attempted": true,
+    "dtype": "float16",
+    "error": null,
+    "shape": [
+      2,
+      16,
+      512,
+      64
+    ],
+    "success": true
+  },
+  "json_path": "runs/dense313m_python_hf_mix_quality_1500_20260626_134951/results.json",
+  "results": [
+    {
+      "active_layers": 24,
+      "active_params": 369927168,
+      "amp_enabled": true,
+      "anchor_interval": null,
+      "anchor_updates_separate_from_mono_updates": true,
+      "attention_impl": "sdpa",
+      "autocast_dtype": "float16",
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "batch": 2,
+      "ce_improvement_per_1b_tokens": 3297.6487067036587,
+      "ce_improvement_per_minute": 0.9968256367715734,
+      "completed": true,
+      "cuda_reset_peak_memory_before_timed_loop": true,
+      "cuda_synchronize_each_step": true,
+      "cuda_version": "12.8",
+      "dataset": "python_hf_mix_2p5b",
+      "dataset_check": {
+        "actual": {
+          "dataset": "python_hf_mix_2p5b",
+          "pretokenized": true,
+          "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+          "tokenizer_type": "bytelevel_bpe",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "expected": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "matches": true,
+        "mismatches": {}
+      },
+      "dataset_metadata": {
+        "dataset": "python_hf_mix_2p5b",
+        "dataset_mix": "python-hf-mix",
+        "dataset_path": "data/generated/python_hf_mix_2p5b",
+        "datasets_used": [
+          {
+            "bytes_kept": 468328786,
+            "bytes_used": 468328786,
+            "config_name": null,
+            "docs_kept": 51652,
+            "docs_read": 51749,
+            "documents_tokenized": 51652,
+            "documents_used": 51652,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 5.0,
+            "name": "codeparrot/codeparrot-clean-valid",
+            "optional": false,
+            "reason": "source token target reached",
+            "role": "small clean Python source supplement",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 97,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 125000000
+          },
+          {
+            "bytes_kept": 482288783,
+            "bytes_used": 482288783,
+            "config_name": null,
+            "docs_kept": 455243,
+            "docs_read": 455243,
+            "documents_tokenized": 455243,
+            "documents_used": 455243,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 4.75540988,
+            "name": "Nan-Do/code-search-net-python",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "CodeSearchNet Python functions with summaries/docstrings",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.1,
+            "target_tokens": 250000000,
+            "tokens_produced": 118885247
+          },
+          {
+            "bytes_kept": 2790044,
+            "bytes_used": 2790044,
+            "config_name": "python",
+            "docs_kept": 2003,
+            "docs_read": 412178,
+            "documents_tokenized": 2003,
+            "documents_used": 2003,
+            "duplicates_skipped": 410175,
+            "error": null,
+            "mixture_percent": 0.02786332,
+            "name": "claudios/code_search_net",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "fallback CodeSearchNet Python mirror",
+            "skipped_duplicates": 410175,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 696583
+          },
+          {
+            "bytes_kept": 8503335451,
+            "bytes_used": 8503335451,
+            "config_name": null,
+            "docs_kept": 875476,
+            "docs_read": 877919,
+            "documents_tokenized": 875476,
+            "documents_used": 875476,
+            "duplicates_skipped": 629,
+            "error": null,
+            "mixture_percent": 90.2167268,
+            "name": "codeparrot/codeparrot-clean",
+            "optional": false,
+            "reason": "max_total_tokens reached",
+            "role": "main clean Python source corpus",
+            "skipped_duplicates": 629,
+            "skipped_empty": 0,
+            "skipped_too_long": 1814,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": null,
+            "target_tokens": null,
+            "tokens_produced": 2255418170
+          }
+        ],
+        "dedupe_exact": true,
+        "disk_check": {
+          "expected_peak_bytes": 10000000000,
+          "free_bytes": 942883528704,
+          "free_gib": 878.1287155151367,
+          "required_bytes": 20737418240
+        },
+        "elapsed_sec": 3576.667398944999,
+        "estimated_512_token_sequences": 4785156,
+        "estimated_epochs_for_planned_run": 0.0668734693877551,
+        "examples": 1384374,
+        "max_bytes_per_dataset": 20000000000,
+        "max_docs_per_dataset": 1500000,
+        "max_file_chars": 200000,
+        "max_token_id": 32767,
+        "max_total_tokens": 2500000000,
+        "metadata_path": "data/generated/python_hf_mix_2p5b/metadata.json",
+        "planned_batch_size": 32,
+        "planned_steps": 10000,
+        "planned_tokens": 163840000,
+        "pretokenized": true,
+        "seq_len": 512,
+        "shuffle_seed": 1234,
+        "source": "local_dataset_path_redacted",
+        "source_tokenizer_path": "data_prepared/python_syntax_512/tokenizer.json",
+        "split": "train.bin/val.bin",
+        "status": "complete",
+        "streaming_note": "large-corpus path writes token chunks directly and does not globally shuffle documents",
+        "streaming_write": true,
+        "token_dtype": "uint16",
+        "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+        "tokenizer_status": "copied_existing:data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_vocab_size": 32768,
+        "tokens_per_sec_prep": 698974.6937994343,
+        "total_tokens": 2500000000,
+        "total_tokens_loaded": 2500000000,
+        "train_bin": {
+          "bytes": 4900000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/train.bin",
+          "sha256": "a780857e61d7527d6cdd6a7da027c6493ec5272c23e4f101f356879a5543e537"
+        },
+        "train_path": "data/generated/python_hf_mix_2p5b/train.bin",
+        "train_token_count": 2450000000,
+        "train_tokens": 2450000000,
+        "val_bin": {
+          "bytes": 100000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/val.bin",
+          "sha256": "8e08573f88e779ccb6e0e8a0c93447a784dd4932466ef4fd1f50b4f5ba73e674"
+        },
+        "val_path": "data/generated/python_hf_mix_2p5b/val.bin",
+        "val_token_count": 50000000,
+        "validation_tokens": 50000000,
+        "vocab_size": 32768
+      },
+      "dtype": "float16",
+      "estimated_total_training_flops_per_token": 2219563008.0,
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_quality_1500.yaml --track chainrule_amp_optimized_1500,mono_ue1_amp_optimized_1500,mono_ue2_amp_optimized_1500,warmup100_chainrule_then_mono_ue2_1500,warmup250_chainrule_then_mono_ue2_1500,warmup500_chainrule_then_mono_ue2_1500,mono_ue2_anchor17_amp_optimized_1500",
+      "final_train_ce": 4.840810775756836,
+      "final_val_ce": 5.479371547698975,
+      "final_val_ppl": 239.69602251319583,
+      "full_chainrule_anchor_updates": 0,
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "generated_samples": {
+        "# Task:\nWrite a function": "# Task:\nWrite a function General Public License\n#    (geometry_entry)\n# You '=_version)# # and the License\n#\n#    data groups here='', load the Free Software Foundation version without the License\n#    # If the GNU General Public License for the default: you have\n   ipv, but or **\n#    # The c in the Free Software Foundation (at the GNU General Public Licenseau to the GNU redistribute it will be the GNU General Public License as the",
+        "def add(a, b):": "def add(a, b):\n        - (old_version[0+2,0,2,1,0*2,2,5,2,2b,5,0,0,User\\2,2.7,2h,1,ATE3,0)\n---\nix7,0,2,02,02,04,\ndef2E6AC(r,2selection2292\r\nAx05ER*2"
+      },
+      "generation_outside_timed_loop": true,
+      "git_commit_hash": "ca4f32f6b55eb89dd08e5395a608d5ed175b2560",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "grad_nonfinite_event_count": 0,
+      "grad_nonfinite_steps_sample": [],
+      "grad_scaler_enabled": true,
+      "grad_scaler_history_checkpoints": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 500
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 750
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1000
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1500
+        }
+      ],
+      "grad_scaler_history_sample": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 4
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 5
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 6
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 7
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 8
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 9
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 10
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 11
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 12
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 13
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 14
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 15
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 16
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 17
+        }
+      ],
+      "grad_scaler_overflow_count": 0,
+      "grad_scaler_value": 65536.0,
+      "gradients_finite": true,
+      "heads": 16,
+      "hidden": 1024,
+      "initial_train_ce": 10.536659240722656,
+      "initial_val_ce": 10.534667015075684,
+      "kl_alpha": null,
+      "kl_distillation": false,
+      "kl_temperature": null,
+      "layers": 24,
+      "max_seconds": null,
+      "mean_ms_step": 201.41724835601175,
+      "model_init_seed": 42,
+      "model_parameter_dtype": "float32",
+      "nan_or_inf": false,
+      "normal_mono_updates": 0,
+      "optimizer": "AdamW",
+      "optimizer_fused_requested": true,
+      "optimizer_state_dtypes": [
+        "float32"
+      ],
+      "optimizer_step_attempts": 1500,
+      "optimizer_updates": 1500,
+      "p50_ms_step": 195.4670659997646,
+      "p90_ms_step": 229.82738999962748,
+      "p99_ms_step": 245.6953840010101,
+      "peak_cuda_memory_allocated_gb": 9.032321536,
+      "peak_cuda_memory_gb": 9.032321536,
+      "peak_cuda_memory_reserved_gb": 10.030678016,
+      "precision_mode": "amp_fp16",
+      "requested_steps": 1500,
+      "same_data_order_seed": true,
+      "same_seed_initial_weights": true,
+      "sdpa_backend_status": {
+        "cuda_available": true,
+        "cudnn_sdp_enabled": true,
+        "flash_attention_available": true,
+        "flash_sdp_enabled": true,
+        "fp16_bf16_reduction_math_sdp_allowed": false,
+        "math_sdp_enabled": true,
+        "mem_efficient_sdp_enabled": true
+      },
+      "seq": 512,
+      "skipped_anchor_collisions": 0,
+      "skipped_optimizer_steps": 0,
+      "steps": 1500,
+      "tokenizer_excluded_from_timing": true,
+      "tokens_processed": 1533000,
+      "tokens_sec": 5074.044096727906,
+      "torch_version": "2.11.0+cu128",
+      "total_params": 369927168,
+      "track": "chainrule_amp_optimized_1500",
+      "train_batch_seed": 42,
+      "trainable_params": 369927168,
+      "true_dense_active": true,
+      "update_every": 1,
+      "val_batch_seed": 1042,
+      "val_ce_delta": 5.055295467376709,
+      "validation_history": [
+        {
+          "elapsed_seconds": 47.41808804900029,
+          "step": 250,
+          "train_ce": 6.583774566650391,
+          "val_ce": 6.210032045841217
+        },
+        {
+          "elapsed_seconds": 101.95677137500024,
+          "step": 500,
+          "train_ce": 6.228926181793213,
+          "val_ce": 5.956296265125275
+        },
+        {
+          "elapsed_seconds": 153.319231372001,
+          "step": 750,
+          "train_ce": 5.3611040115356445,
+          "val_ce": 5.772234559059143
+        },
+        {
+          "elapsed_seconds": 205.353732597001,
+          "step": 1000,
+          "train_ce": 6.194173812866211,
+          "val_ce": 5.721814870834351
+        },
+        {
+          "elapsed_seconds": 253.41521388699948,
+          "step": 1250,
+          "train_ce": 5.2610979080200195,
+          "val_ce": 5.572680711746216
+        },
+        {
+          "elapsed_seconds": 304.283630281001,
+          "step": 1500,
+          "train_ce": 4.840810775756836,
+          "val_ce": 5.479371547698975
+        }
+      ],
+      "validation_outside_timed_loop": true,
+      "vocab": 32768,
+      "wall_clock_seconds": 304.2836348239998,
+      "warmup_chainrule_updates": 0,
+      "warmup_grad_nonfinite_steps": [],
+      "warmup_optimizer_step_attempts": 3,
+      "warmup_optimizer_updates": 3,
+      "warmup_skipped_optimizer_steps": 0,
+      "warmup_steps": 0
+    },
+    {
+      "active_layers": 24,
+      "active_params": 369927168,
+      "amp_enabled": true,
+      "anchor_interval": null,
+      "anchor_updates_separate_from_mono_updates": true,
+      "attention_impl": "sdpa",
+      "autocast_dtype": "float16",
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "batch": 2,
+      "ce_improvement_per_1b_tokens": 3306.5328703778905,
+      "ce_improvement_per_minute": 1.0527595292392153,
+      "completed": true,
+      "cuda_reset_peak_memory_before_timed_loop": true,
+      "cuda_synchronize_each_step": true,
+      "cuda_version": "12.8",
+      "dataset": "python_hf_mix_2p5b",
+      "dataset_check": {
+        "actual": {
+          "dataset": "python_hf_mix_2p5b",
+          "pretokenized": true,
+          "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+          "tokenizer_type": "bytelevel_bpe",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "expected": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "matches": true,
+        "mismatches": {}
+      },
+      "dataset_metadata": {
+        "dataset": "python_hf_mix_2p5b",
+        "dataset_mix": "python-hf-mix",
+        "dataset_path": "data/generated/python_hf_mix_2p5b",
+        "datasets_used": [
+          {
+            "bytes_kept": 468328786,
+            "bytes_used": 468328786,
+            "config_name": null,
+            "docs_kept": 51652,
+            "docs_read": 51749,
+            "documents_tokenized": 51652,
+            "documents_used": 51652,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 5.0,
+            "name": "codeparrot/codeparrot-clean-valid",
+            "optional": false,
+            "reason": "source token target reached",
+            "role": "small clean Python source supplement",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 97,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 125000000
+          },
+          {
+            "bytes_kept": 482288783,
+            "bytes_used": 482288783,
+            "config_name": null,
+            "docs_kept": 455243,
+            "docs_read": 455243,
+            "documents_tokenized": 455243,
+            "documents_used": 455243,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 4.75540988,
+            "name": "Nan-Do/code-search-net-python",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "CodeSearchNet Python functions with summaries/docstrings",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.1,
+            "target_tokens": 250000000,
+            "tokens_produced": 118885247
+          },
+          {
+            "bytes_kept": 2790044,
+            "bytes_used": 2790044,
+            "config_name": "python",
+            "docs_kept": 2003,
+            "docs_read": 412178,
+            "documents_tokenized": 2003,
+            "documents_used": 2003,
+            "duplicates_skipped": 410175,
+            "error": null,
+            "mixture_percent": 0.02786332,
+            "name": "claudios/code_search_net",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "fallback CodeSearchNet Python mirror",
+            "skipped_duplicates": 410175,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 696583
+          },
+          {
+            "bytes_kept": 8503335451,
+            "bytes_used": 8503335451,
+            "config_name": null,
+            "docs_kept": 875476,
+            "docs_read": 877919,
+            "documents_tokenized": 875476,
+            "documents_used": 875476,
+            "duplicates_skipped": 629,
+            "error": null,
+            "mixture_percent": 90.2167268,
+            "name": "codeparrot/codeparrot-clean",
+            "optional": false,
+            "reason": "max_total_tokens reached",
+            "role": "main clean Python source corpus",
+            "skipped_duplicates": 629,
+            "skipped_empty": 0,
+            "skipped_too_long": 1814,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": null,
+            "target_tokens": null,
+            "tokens_produced": 2255418170
+          }
+        ],
+        "dedupe_exact": true,
+        "disk_check": {
+          "expected_peak_bytes": 10000000000,
+          "free_bytes": 942883528704,
+          "free_gib": 878.1287155151367,
+          "required_bytes": 20737418240
+        },
+        "elapsed_sec": 3576.667398944999,
+        "estimated_512_token_sequences": 4785156,
+        "estimated_epochs_for_planned_run": 0.0668734693877551,
+        "examples": 1384374,
+        "max_bytes_per_dataset": 20000000000,
+        "max_docs_per_dataset": 1500000,
+        "max_file_chars": 200000,
+        "max_token_id": 32767,
+        "max_total_tokens": 2500000000,
+        "metadata_path": "data/generated/python_hf_mix_2p5b/metadata.json",
+        "planned_batch_size": 32,
+        "planned_steps": 10000,
+        "planned_tokens": 163840000,
+        "pretokenized": true,
+        "seq_len": 512,
+        "shuffle_seed": 1234,
+        "source": "local_dataset_path_redacted",
+        "source_tokenizer_path": "data_prepared/python_syntax_512/tokenizer.json",
+        "split": "train.bin/val.bin",
+        "status": "complete",
+        "streaming_note": "large-corpus path writes token chunks directly and does not globally shuffle documents",
+        "streaming_write": true,
+        "token_dtype": "uint16",
+        "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+        "tokenizer_status": "copied_existing:data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_vocab_size": 32768,
+        "tokens_per_sec_prep": 698974.6937994343,
+        "total_tokens": 2500000000,
+        "total_tokens_loaded": 2500000000,
+        "train_bin": {
+          "bytes": 4900000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/train.bin",
+          "sha256": "a780857e61d7527d6cdd6a7da027c6493ec5272c23e4f101f356879a5543e537"
+        },
+        "train_path": "data/generated/python_hf_mix_2p5b/train.bin",
+        "train_token_count": 2450000000,
+        "train_tokens": 2450000000,
+        "val_bin": {
+          "bytes": 100000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/val.bin",
+          "sha256": "8e08573f88e779ccb6e0e8a0c93447a784dd4932466ef4fd1f50b4f5ba73e674"
+        },
+        "val_path": "data/generated/python_hf_mix_2p5b/val.bin",
+        "val_token_count": 50000000,
+        "validation_tokens": 50000000,
+        "vocab_size": 32768
+      },
+      "dtype": "float16",
+      "estimated_total_training_flops_per_token": 2219563008.0,
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_quality_1500.yaml --track chainrule_amp_optimized_1500,mono_ue1_amp_optimized_1500,mono_ue2_amp_optimized_1500,warmup100_chainrule_then_mono_ue2_1500,warmup250_chainrule_then_mono_ue2_1500,warmup500_chainrule_then_mono_ue2_1500,mono_ue2_anchor17_amp_optimized_1500",
+      "final_train_ce": 4.8062639236450195,
+      "final_val_ce": 5.465752124786377,
+      "final_val_ppl": 236.45363088231286,
+      "full_chainrule_anchor_updates": 0,
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "generated_samples": {
+        "# Task:\nWrite a function": "# Task:\nWrite a function General Public License is free; without even the GNU General Public License at\n#    it to the storage the License\n#\n#    If the implied\n# A even the License version without the License\n#    If the GNU General Public License and the GNU General Public License\n       but it will be useful for\n#    to the GNU General Public License for the GNU General Public License and or theau to the GNU General Public License # If strings:\n# See the",
+        "def add(a, b):": "def add(a, b):\n        ############ = \"%sFormat = [2, Tri1.0.strip(np.namespace(value) == 0.5].y_sequence(priority.numUser.0,2.7,1h >1.ATE_model_label(1,i] +0).1,1.2.02,0,0,0,2,0.r,2,2292ff_A)  3*2"
+      },
+      "generation_outside_timed_loop": true,
+      "git_commit_hash": "ca4f32f6b55eb89dd08e5395a608d5ed175b2560",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "grad_nonfinite_event_count": 0,
+      "grad_nonfinite_steps_sample": [],
+      "grad_scaler_enabled": true,
+      "grad_scaler_history_checkpoints": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 500
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 750
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1000
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1500
+        }
+      ],
+      "grad_scaler_history_sample": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 4
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 5
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 6
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 7
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 8
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 9
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 10
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 11
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 12
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 13
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 14
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 15
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 16
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 17
+        }
+      ],
+      "grad_scaler_overflow_count": 0,
+      "grad_scaler_value": 65536.0,
+      "gradients_finite": true,
+      "heads": 16,
+      "hidden": 1024,
+      "initial_train_ce": 10.536659240722656,
+      "initial_val_ce": 10.534667015075684,
+      "kl_alpha": null,
+      "kl_distillation": false,
+      "kl_temperature": null,
+      "layers": 24,
+      "max_seconds": null,
+      "mean_ms_step": 191.27414983671406,
+      "model_init_seed": 42,
+      "model_parameter_dtype": "float32",
+      "nan_or_inf": false,
+      "normal_mono_updates": 1500,
+      "optimizer": "AdamW",
+      "optimizer_fused_requested": true,
+      "optimizer_state_dtypes": [
+        "float32"
+      ],
+      "optimizer_step_attempts": 1500,
+      "optimizer_updates": 1500,
+      "p50_ms_step": 189.56836500001373,
+      "p90_ms_step": 204.91336600025534,
+      "p99_ms_step": 230.1982749995659,
+      "peak_cuda_memory_allocated_gb": 9.032321536,
+      "peak_cuda_memory_gb": 9.032321536,
+      "peak_cuda_memory_reserved_gb": 10.164895744,
+      "precision_mode": "amp_fp16",
+      "requested_steps": 1500,
+      "same_data_order_seed": true,
+      "same_seed_initial_weights": true,
+      "sdpa_backend_status": {
+        "cuda_available": true,
+        "cudnn_sdp_enabled": true,
+        "flash_attention_available": true,
+        "flash_sdp_enabled": true,
+        "fp16_bf16_reduction_math_sdp_allowed": false,
+        "math_sdp_enabled": true,
+        "mem_efficient_sdp_enabled": true
+      },
+      "seq": 512,
+      "skipped_anchor_collisions": 0,
+      "skipped_optimizer_steps": 0,
+      "steps": 1500,
+      "tokenizer_excluded_from_timing": true,
+      "tokens_processed": 1533000,
+      "tokens_sec": 5343.116154861782,
+      "torch_version": "2.11.0+cu128",
+      "total_params": 369927168,
+      "track": "mono_ue1_amp_optimized_1500",
+      "train_batch_seed": 42,
+      "trainable_params": 369927168,
+      "true_dense_active": true,
+      "update_every": 1,
+      "val_batch_seed": 1042,
+      "val_ce_delta": 5.068914890289307,
+      "validation_history": [
+        {
+          "elapsed_seconds": 48.810987490000116,
+          "step": 250,
+          "train_ce": 6.583827018737793,
+          "val_ce": 6.21004980802536
+        },
+        {
+          "elapsed_seconds": 98.42713309999999,
+          "step": 500,
+          "train_ce": 6.2276482582092285,
+          "val_ce": 5.955715239048004
+        },
+        {
+          "elapsed_seconds": 146.33542043099987,
+          "step": 750,
+          "train_ce": 5.3546833992004395,
+          "val_ce": 5.772182524204254
+        },
+        {
+          "elapsed_seconds": 193.07107414599886,
+          "step": 1000,
+          "train_ce": 6.203763961791992,
+          "val_ce": 5.721980273723602
+        },
+        {
+          "elapsed_seconds": 239.74268008099898,
+          "step": 1250,
+          "train_ce": 5.261571884155273,
+          "val_ce": 5.574750065803528
+        },
+        {
+          "elapsed_seconds": 288.89302892699925,
+          "step": 1500,
+          "train_ce": 4.8062639236450195,
+          "val_ce": 5.465752124786377
+        }
+      ],
+      "validation_outside_timed_loop": true,
+      "vocab": 32768,
+      "wall_clock_seconds": 288.89303299600033,
+      "warmup_chainrule_updates": 0,
+      "warmup_grad_nonfinite_steps": [],
+      "warmup_optimizer_step_attempts": 3,
+      "warmup_optimizer_updates": 3,
+      "warmup_skipped_optimizer_steps": 0,
+      "warmup_steps": 0
+    },
+    {
+      "active_layers": 24,
+      "active_params": 369927168,
+      "amp_enabled": true,
+      "anchor_interval": null,
+      "anchor_updates_separate_from_mono_updates": true,
+      "attention_impl": "sdpa",
+      "autocast_dtype": "float16",
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "batch": 2,
+      "ce_improvement_per_1b_tokens": 3077.708889438059,
+      "ce_improvement_per_minute": 1.6551220458638516,
+      "completed": true,
+      "cuda_reset_peak_memory_before_timed_loop": true,
+      "cuda_synchronize_each_step": true,
+      "cuda_version": "12.8",
+      "dataset": "python_hf_mix_2p5b",
+      "dataset_check": {
+        "actual": {
+          "dataset": "python_hf_mix_2p5b",
+          "pretokenized": true,
+          "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+          "tokenizer_type": "bytelevel_bpe",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "expected": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "matches": true,
+        "mismatches": {}
+      },
+      "dataset_metadata": {
+        "dataset": "python_hf_mix_2p5b",
+        "dataset_mix": "python-hf-mix",
+        "dataset_path": "data/generated/python_hf_mix_2p5b",
+        "datasets_used": [
+          {
+            "bytes_kept": 468328786,
+            "bytes_used": 468328786,
+            "config_name": null,
+            "docs_kept": 51652,
+            "docs_read": 51749,
+            "documents_tokenized": 51652,
+            "documents_used": 51652,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 5.0,
+            "name": "codeparrot/codeparrot-clean-valid",
+            "optional": false,
+            "reason": "source token target reached",
+            "role": "small clean Python source supplement",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 97,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 125000000
+          },
+          {
+            "bytes_kept": 482288783,
+            "bytes_used": 482288783,
+            "config_name": null,
+            "docs_kept": 455243,
+            "docs_read": 455243,
+            "documents_tokenized": 455243,
+            "documents_used": 455243,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 4.75540988,
+            "name": "Nan-Do/code-search-net-python",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "CodeSearchNet Python functions with summaries/docstrings",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.1,
+            "target_tokens": 250000000,
+            "tokens_produced": 118885247
+          },
+          {
+            "bytes_kept": 2790044,
+            "bytes_used": 2790044,
+            "config_name": "python",
+            "docs_kept": 2003,
+            "docs_read": 412178,
+            "documents_tokenized": 2003,
+            "documents_used": 2003,
+            "duplicates_skipped": 410175,
+            "error": null,
+            "mixture_percent": 0.02786332,
+            "name": "claudios/code_search_net",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "fallback CodeSearchNet Python mirror",
+            "skipped_duplicates": 410175,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 696583
+          },
+          {
+            "bytes_kept": 8503335451,
+            "bytes_used": 8503335451,
+            "config_name": null,
+            "docs_kept": 875476,
+            "docs_read": 877919,
+            "documents_tokenized": 875476,
+            "documents_used": 875476,
+            "duplicates_skipped": 629,
+            "error": null,
+            "mixture_percent": 90.2167268,
+            "name": "codeparrot/codeparrot-clean",
+            "optional": false,
+            "reason": "max_total_tokens reached",
+            "role": "main clean Python source corpus",
+            "skipped_duplicates": 629,
+            "skipped_empty": 0,
+            "skipped_too_long": 1814,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": null,
+            "target_tokens": null,
+            "tokens_produced": 2255418170
+          }
+        ],
+        "dedupe_exact": true,
+        "disk_check": {
+          "expected_peak_bytes": 10000000000,
+          "free_bytes": 942883528704,
+          "free_gib": 878.1287155151367,
+          "required_bytes": 20737418240
+        },
+        "elapsed_sec": 3576.667398944999,
+        "estimated_512_token_sequences": 4785156,
+        "estimated_epochs_for_planned_run": 0.0668734693877551,
+        "examples": 1384374,
+        "max_bytes_per_dataset": 20000000000,
+        "max_docs_per_dataset": 1500000,
+        "max_file_chars": 200000,
+        "max_token_id": 32767,
+        "max_total_tokens": 2500000000,
+        "metadata_path": "data/generated/python_hf_mix_2p5b/metadata.json",
+        "planned_batch_size": 32,
+        "planned_steps": 10000,
+        "planned_tokens": 163840000,
+        "pretokenized": true,
+        "seq_len": 512,
+        "shuffle_seed": 1234,
+        "source": "local_dataset_path_redacted",
+        "source_tokenizer_path": "data_prepared/python_syntax_512/tokenizer.json",
+        "split": "train.bin/val.bin",
+        "status": "complete",
+        "streaming_note": "large-corpus path writes token chunks directly and does not globally shuffle documents",
+        "streaming_write": true,
+        "token_dtype": "uint16",
+        "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+        "tokenizer_status": "copied_existing:data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_vocab_size": 32768,
+        "tokens_per_sec_prep": 698974.6937994343,
+        "total_tokens": 2500000000,
+        "total_tokens_loaded": 2500000000,
+        "train_bin": {
+          "bytes": 4900000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/train.bin",
+          "sha256": "a780857e61d7527d6cdd6a7da027c6493ec5272c23e4f101f356879a5543e537"
+        },
+        "train_path": "data/generated/python_hf_mix_2p5b/train.bin",
+        "train_token_count": 2450000000,
+        "train_tokens": 2450000000,
+        "val_bin": {
+          "bytes": 100000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/val.bin",
+          "sha256": "8e08573f88e779ccb6e0e8a0c93447a784dd4932466ef4fd1f50b4f5ba73e674"
+        },
+        "val_path": "data/generated/python_hf_mix_2p5b/val.bin",
+        "val_token_count": 50000000,
+        "validation_tokens": 50000000,
+        "vocab_size": 32768
+      },
+      "dtype": "float16",
+      "estimated_total_training_flops_per_token": 1479708672.0,
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_quality_1500.yaml --track chainrule_amp_optimized_1500,mono_ue1_amp_optimized_1500,mono_ue2_amp_optimized_1500,warmup100_chainrule_then_mono_ue2_1500,warmup250_chainrule_then_mono_ue2_1500,warmup500_chainrule_then_mono_ue2_1500,mono_ue2_anchor17_amp_optimized_1500",
+      "final_train_ce": 5.268192768096924,
+      "final_val_ce": 5.816539287567139,
+      "final_val_ppl": 335.8079058068404,
+      "full_chainrule_anchor_updates": 0,
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "generated_samples": {
+        "# Task:\nWrite a function": "# Task:\nWrite a function Generaltext):\n    import existing.geometry_entry_grad_set_Status)\n    \"\"\"\n    if d =conom_tasks_match_id = np = set_Progress_author_router_headers_out = sum(return_id_size_id_accounting(id %s = i for model = np.L_id = '/NAME_id:\n                \"unit_iterkeys_service_util.threadclient.urls_PYTHON_bugs = config",
+        "def add(a, b):": "def add(a, b):\n        ############ = str(Format = [2,\n            else:\n                return\n            6. fields))\n        except or list(\n            RH(a_sequence(priority.numUser.debug=False):\n       mod_h\")\n        - context_model_name))\n        elif module.args, h = 1,\n        \"\"\"\n        \"\"\"\n        self.get(self.assertEqual['level_unique_list =selection_display\n        x_response_volume_MOT."
+      },
+      "generation_outside_timed_loop": true,
+      "git_commit_hash": "ca4f32f6b55eb89dd08e5395a608d5ed175b2560",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "grad_nonfinite_event_count": 0,
+      "grad_nonfinite_steps_sample": [],
+      "grad_scaler_enabled": true,
+      "grad_scaler_history_checkpoints": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 500
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 750
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1000
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1500
+        }
+      ],
+      "grad_scaler_history_sample": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 4
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 6
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 8
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 10
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 12
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 14
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 16
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 18
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 20
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 22
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 24
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 26
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 28
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 30
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 32
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 34
+        }
+      ],
+      "grad_scaler_overflow_count": 0,
+      "grad_scaler_value": 65536.0,
+      "gradients_finite": true,
+      "heads": 16,
+      "hidden": 1024,
+      "initial_train_ce": 10.536659240722656,
+      "initial_val_ce": 10.534667015075684,
+      "kl_alpha": null,
+      "kl_distillation": false,
+      "kl_temperature": null,
+      "layers": 24,
+      "max_seconds": null,
+      "mean_ms_step": 112.69694081535029,
+      "model_init_seed": 42,
+      "model_parameter_dtype": "float32",
+      "nan_or_inf": false,
+      "normal_mono_updates": 750,
+      "optimizer": "AdamW",
+      "optimizer_fused_requested": true,
+      "optimizer_state_dtypes": [
+        "float32"
+      ],
+      "optimizer_step_attempts": 750,
+      "optimizer_updates": 750,
+      "p50_ms_step": 177.07230300038646,
+      "p90_ms_step": 212.1646880004846,
+      "p99_ms_step": 242.99164399963047,
+      "peak_cuda_memory_allocated_gb": 9.032321536,
+      "peak_cuda_memory_gb": 9.032321536,
+      "peak_cuda_memory_reserved_gb": 10.164895744,
+      "precision_mode": "amp_fp16",
+      "requested_steps": 1500,
+      "same_data_order_seed": true,
+      "same_seed_initial_weights": true,
+      "sdpa_backend_status": {
+        "cuda_available": true,
+        "cudnn_sdp_enabled": true,
+        "flash_attention_available": true,
+        "flash_sdp_enabled": true,
+        "fp16_bf16_reduction_math_sdp_allowed": false,
+        "math_sdp_enabled": true,
+        "mem_efficient_sdp_enabled": true
+      },
+      "seq": 512,
+      "skipped_anchor_collisions": 0,
+      "skipped_optimizer_steps": 0,
+      "steps": 1500,
+      "tokenizer_excluded_from_timing": true,
+      "tokens_processed": 1533000,
+      "tokens_sec": 9068.56914310131,
+      "torch_version": "2.11.0+cu128",
+      "total_params": 369927168,
+      "track": "mono_ue2_amp_optimized_1500",
+      "train_batch_seed": 42,
+      "trainable_params": 369927168,
+      "true_dense_active": true,
+      "update_every": 2,
+      "val_batch_seed": 1042,
+      "val_ce_delta": 4.718127727508545,
+      "validation_history": [
+        {
+          "elapsed_seconds": 28.407854949000466,
+          "step": 250,
+          "train_ce": 7.018630504608154,
+          "val_ce": 6.561730444431305
+        },
+        {
+          "elapsed_seconds": 56.494150638000065,
+          "step": 500,
+          "train_ce": 6.437158584594727,
+          "val_ce": 6.231144845485687
+        },
+        {
+          "elapsed_seconds": 84.38138397900002,
+          "step": 750,
+          "train_ce": 5.592168807983398,
+          "val_ce": 6.056174576282501
+        },
+        {
+          "elapsed_seconds": 111.88596192499972,
+          "step": 1000,
+          "train_ce": 6.612854957580566,
+          "val_ce": 5.978772342205048
+        },
+        {
+          "elapsed_seconds": 139.55977606499982,
+          "step": 1250,
+          "train_ce": 5.781172752380371,
+          "val_ce": 5.859648644924164
+        },
+        {
+          "elapsed_seconds": 171.03733191299943,
+          "step": 1500,
+          "train_ce": 5.268192768096924,
+          "val_ce": 5.816539287567139
+        }
+      ],
+      "validation_outside_timed_loop": true,
+      "vocab": 32768,
+      "wall_clock_seconds": 171.03733489499973,
+      "warmup_chainrule_updates": 0,
+      "warmup_grad_nonfinite_steps": [],
+      "warmup_optimizer_step_attempts": 3,
+      "warmup_optimizer_updates": 3,
+      "warmup_skipped_optimizer_steps": 0,
+      "warmup_steps": 0
+    },
+    {
+      "active_layers": 24,
+      "active_params": 369927168,
+      "amp_enabled": true,
+      "anchor_interval": null,
+      "anchor_updates_separate_from_mono_updates": true,
+      "attention_impl": "sdpa",
+      "autocast_dtype": "float16",
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "batch": 2,
+      "ce_improvement_per_1b_tokens": 3078.4898152634432,
+      "ce_improvement_per_minute": 1.678280998825699,
+      "completed": true,
+      "cuda_reset_peak_memory_before_timed_loop": true,
+      "cuda_synchronize_each_step": true,
+      "cuda_version": "12.8",
+      "dataset": "python_hf_mix_2p5b",
+      "dataset_check": {
+        "actual": {
+          "dataset": "python_hf_mix_2p5b",
+          "pretokenized": true,
+          "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+          "tokenizer_type": "bytelevel_bpe",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "expected": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "matches": true,
+        "mismatches": {}
+      },
+      "dataset_metadata": {
+        "dataset": "python_hf_mix_2p5b",
+        "dataset_mix": "python-hf-mix",
+        "dataset_path": "data/generated/python_hf_mix_2p5b",
+        "datasets_used": [
+          {
+            "bytes_kept": 468328786,
+            "bytes_used": 468328786,
+            "config_name": null,
+            "docs_kept": 51652,
+            "docs_read": 51749,
+            "documents_tokenized": 51652,
+            "documents_used": 51652,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 5.0,
+            "name": "codeparrot/codeparrot-clean-valid",
+            "optional": false,
+            "reason": "source token target reached",
+            "role": "small clean Python source supplement",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 97,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 125000000
+          },
+          {
+            "bytes_kept": 482288783,
+            "bytes_used": 482288783,
+            "config_name": null,
+            "docs_kept": 455243,
+            "docs_read": 455243,
+            "documents_tokenized": 455243,
+            "documents_used": 455243,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 4.75540988,
+            "name": "Nan-Do/code-search-net-python",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "CodeSearchNet Python functions with summaries/docstrings",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.1,
+            "target_tokens": 250000000,
+            "tokens_produced": 118885247
+          },
+          {
+            "bytes_kept": 2790044,
+            "bytes_used": 2790044,
+            "config_name": "python",
+            "docs_kept": 2003,
+            "docs_read": 412178,
+            "documents_tokenized": 2003,
+            "documents_used": 2003,
+            "duplicates_skipped": 410175,
+            "error": null,
+            "mixture_percent": 0.02786332,
+            "name": "claudios/code_search_net",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "fallback CodeSearchNet Python mirror",
+            "skipped_duplicates": 410175,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 696583
+          },
+          {
+            "bytes_kept": 8503335451,
+            "bytes_used": 8503335451,
+            "config_name": null,
+            "docs_kept": 875476,
+            "docs_read": 877919,
+            "documents_tokenized": 875476,
+            "documents_used": 875476,
+            "duplicates_skipped": 629,
+            "error": null,
+            "mixture_percent": 90.2167268,
+            "name": "codeparrot/codeparrot-clean",
+            "optional": false,
+            "reason": "max_total_tokens reached",
+            "role": "main clean Python source corpus",
+            "skipped_duplicates": 629,
+            "skipped_empty": 0,
+            "skipped_too_long": 1814,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": null,
+            "target_tokens": null,
+            "tokens_produced": 2255418170
+          }
+        ],
+        "dedupe_exact": true,
+        "disk_check": {
+          "expected_peak_bytes": 10000000000,
+          "free_bytes": 942883528704,
+          "free_gib": 878.1287155151367,
+          "required_bytes": 20737418240
+        },
+        "elapsed_sec": 3576.667398944999,
+        "estimated_512_token_sequences": 4785156,
+        "estimated_epochs_for_planned_run": 0.0668734693877551,
+        "examples": 1384374,
+        "max_bytes_per_dataset": 20000000000,
+        "max_docs_per_dataset": 1500000,
+        "max_file_chars": 200000,
+        "max_token_id": 32767,
+        "max_total_tokens": 2500000000,
+        "metadata_path": "data/generated/python_hf_mix_2p5b/metadata.json",
+        "planned_batch_size": 32,
+        "planned_steps": 10000,
+        "planned_tokens": 163840000,
+        "pretokenized": true,
+        "seq_len": 512,
+        "shuffle_seed": 1234,
+        "source": "local_dataset_path_redacted",
+        "source_tokenizer_path": "data_prepared/python_syntax_512/tokenizer.json",
+        "split": "train.bin/val.bin",
+        "status": "complete",
+        "streaming_note": "large-corpus path writes token chunks directly and does not globally shuffle documents",
+        "streaming_write": true,
+        "token_dtype": "uint16",
+        "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+        "tokenizer_status": "copied_existing:data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_vocab_size": 32768,
+        "tokens_per_sec_prep": 698974.6937994343,
+        "total_tokens": 2500000000,
+        "total_tokens_loaded": 2500000000,
+        "train_bin": {
+          "bytes": 4900000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/train.bin",
+          "sha256": "a780857e61d7527d6cdd6a7da027c6493ec5272c23e4f101f356879a5543e537"
+        },
+        "train_path": "data/generated/python_hf_mix_2p5b/train.bin",
+        "train_token_count": 2450000000,
+        "train_tokens": 2450000000,
+        "val_bin": {
+          "bytes": 100000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/val.bin",
+          "sha256": "8e08573f88e779ccb6e0e8a0c93447a784dd4932466ef4fd1f50b4f5ba73e674"
+        },
+        "val_path": "data/generated/python_hf_mix_2p5b/val.bin",
+        "val_token_count": 50000000,
+        "validation_tokens": 50000000,
+        "vocab_size": 32768
+      },
+      "dtype": "float16",
+      "estimated_total_training_flops_per_token": 1479708672.0,
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_quality_1500.yaml --track chainrule_amp_optimized_1500,mono_ue1_amp_optimized_1500,mono_ue2_amp_optimized_1500,warmup100_chainrule_then_mono_ue2_1500,warmup250_chainrule_then_mono_ue2_1500,warmup500_chainrule_then_mono_ue2_1500,mono_ue2_anchor17_amp_optimized_1500",
+      "final_train_ce": 5.249317646026611,
+      "final_val_ce": 5.815342128276825,
+      "final_val_ppl": 335.406130794972,
+      "full_chainrule_anchor_updates": 0,
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "generated_samples": {
+        "# Task:\nWrite a function": "# Task:\nWrite a function General _code_x_value_id:\n        if m_ '=_STORE_data_equal(lenconom_tasks_match_id:\n            load_src_URL = range_all()\n        if not None:\n            elif None:\n                for data_accounting(id %s\" % **t = np.L_idain_NAME_id:\n                \"unit_iterkeys_class book(\n                #client.urls_PYTHON_GROUP = config",
+        "def add(a, b):": "def add(a, b):\n        - data = str(Formatsize+2,\n            xrange.nameACT_config. fields))\n        m_full_create_some_node_name_r_User.debug_query.errors.bind_id_vATE_model_label_set_iCmd_entry).1])\n        raise error_module2_info_mailbox_name = offset_vars_id = int(2 = flags_id(x_value*2"
+      },
+      "generation_outside_timed_loop": true,
+      "git_commit_hash": "ca4f32f6b55eb89dd08e5395a608d5ed175b2560",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "grad_nonfinite_event_count": 0,
+      "grad_nonfinite_steps_sample": [],
+      "grad_scaler_enabled": true,
+      "grad_scaler_history_checkpoints": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 500
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 750
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1000
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1500
+        }
+      ],
+      "grad_scaler_history_sample": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 4
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 5
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 6
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 7
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 8
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 9
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 10
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 11
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 12
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 13
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 14
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 15
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 16
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 17
+        }
+      ],
+      "grad_scaler_overflow_count": 0,
+      "grad_scaler_value": 65536.0,
+      "gradients_finite": true,
+      "heads": 16,
+      "hidden": 1024,
+      "initial_train_ce": 10.536659240722656,
+      "initial_val_ce": 10.534667015075684,
+      "kl_alpha": null,
+      "kl_distillation": false,
+      "kl_temperature": null,
+      "layers": 24,
+      "max_seconds": null,
+      "mean_ms_step": 111.27391445467583,
+      "model_init_seed": 42,
+      "model_parameter_dtype": "float32",
+      "nan_or_inf": false,
+      "normal_mono_updates": 700,
+      "optimizer": "AdamW",
+      "optimizer_fused_requested": true,
+      "optimizer_state_dtypes": [
+        "float32"
+      ],
+      "optimizer_step_attempts": 800,
+      "optimizer_updates": 800,
+      "p50_ms_step": 175.5957010009297,
+      "p90_ms_step": 197.87402000110887,
+      "p99_ms_step": 208.38701100001344,
+      "peak_cuda_memory_allocated_gb": 9.032321536,
+      "peak_cuda_memory_gb": 9.032321536,
+      "peak_cuda_memory_reserved_gb": 10.164895744,
+      "precision_mode": "amp_fp16",
+      "requested_steps": 1500,
+      "same_data_order_seed": true,
+      "same_seed_initial_weights": true,
+      "sdpa_backend_status": {
+        "cuda_available": true,
+        "cudnn_sdp_enabled": true,
+        "flash_attention_available": true,
+        "flash_sdp_enabled": true,
+        "fp16_bf16_reduction_math_sdp_allowed": false,
+        "math_sdp_enabled": true,
+        "mem_efficient_sdp_enabled": true
+      },
+      "seq": 512,
+      "skipped_anchor_collisions": 0,
+      "skipped_optimizer_steps": 0,
+      "steps": 1500,
+      "tokenizer_excluded_from_timing": true,
+      "tokens_processed": 1533000,
+      "tokens_sec": 9184.542531900248,
+      "torch_version": "2.11.0+cu128",
+      "total_params": 369927168,
+      "track": "warmup100_chainrule_then_mono_ue2_1500",
+      "train_batch_seed": 42,
+      "trainable_params": 369927168,
+      "true_dense_active": true,
+      "update_every": 2,
+      "val_batch_seed": 1042,
+      "val_ce_delta": 4.719324886798859,
+      "validation_history": [
+        {
+          "elapsed_seconds": 35.53575945299963,
+          "step": 250,
+          "train_ce": 6.818595886230469,
+          "val_ce": 6.355498254299164
+        },
+        {
+          "elapsed_seconds": 61.35160621399882,
+          "step": 500,
+          "train_ce": 6.380903244018555,
+          "val_ce": 6.162191271781921
+        },
+        {
+          "elapsed_seconds": 87.73891702399851,
+          "step": 750,
+          "train_ce": 5.578877925872803,
+          "val_ce": 5.997209668159485
+        },
+        {
+          "elapsed_seconds": 114.67034606199923,
+          "step": 1000,
+          "train_ce": 6.595986843109131,
+          "val_ce": 5.963414907455444
+        },
+        {
+          "elapsed_seconds": 141.22594886099978,
+          "step": 1250,
+          "train_ce": 5.773519515991211,
+          "val_ce": 5.854283809661865
+        },
+        {
+          "elapsed_seconds": 168.71995018399866,
+          "step": 1500,
+          "train_ce": 5.249317646026611,
+          "val_ce": 5.815342128276825
+        }
+      ],
+      "validation_outside_timed_loop": true,
+      "vocab": 32768,
+      "wall_clock_seconds": 168.7199541709997,
+      "warmup_chainrule_updates": 100,
+      "warmup_grad_nonfinite_steps": [],
+      "warmup_optimizer_step_attempts": 3,
+      "warmup_optimizer_updates": 3,
+      "warmup_skipped_optimizer_steps": 0,
+      "warmup_steps": 100
+    },
+    {
+      "active_layers": 24,
+      "active_params": 369927168,
+      "amp_enabled": true,
+      "anchor_interval": null,
+      "anchor_updates_separate_from_mono_updates": true,
+      "attention_impl": "sdpa",
+      "autocast_dtype": "float16",
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "batch": 2,
+      "ce_improvement_per_1b_tokens": 3107.7850121574625,
+      "ce_improvement_per_minute": 1.5911812845671567,
+      "completed": true,
+      "cuda_reset_peak_memory_before_timed_loop": true,
+      "cuda_synchronize_each_step": true,
+      "cuda_version": "12.8",
+      "dataset": "python_hf_mix_2p5b",
+      "dataset_check": {
+        "actual": {
+          "dataset": "python_hf_mix_2p5b",
+          "pretokenized": true,
+          "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+          "tokenizer_type": "bytelevel_bpe",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "expected": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "matches": true,
+        "mismatches": {}
+      },
+      "dataset_metadata": {
+        "dataset": "python_hf_mix_2p5b",
+        "dataset_mix": "python-hf-mix",
+        "dataset_path": "data/generated/python_hf_mix_2p5b",
+        "datasets_used": [
+          {
+            "bytes_kept": 468328786,
+            "bytes_used": 468328786,
+            "config_name": null,
+            "docs_kept": 51652,
+            "docs_read": 51749,
+            "documents_tokenized": 51652,
+            "documents_used": 51652,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 5.0,
+            "name": "codeparrot/codeparrot-clean-valid",
+            "optional": false,
+            "reason": "source token target reached",
+            "role": "small clean Python source supplement",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 97,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 125000000
+          },
+          {
+            "bytes_kept": 482288783,
+            "bytes_used": 482288783,
+            "config_name": null,
+            "docs_kept": 455243,
+            "docs_read": 455243,
+            "documents_tokenized": 455243,
+            "documents_used": 455243,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 4.75540988,
+            "name": "Nan-Do/code-search-net-python",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "CodeSearchNet Python functions with summaries/docstrings",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.1,
+            "target_tokens": 250000000,
+            "tokens_produced": 118885247
+          },
+          {
+            "bytes_kept": 2790044,
+            "bytes_used": 2790044,
+            "config_name": "python",
+            "docs_kept": 2003,
+            "docs_read": 412178,
+            "documents_tokenized": 2003,
+            "documents_used": 2003,
+            "duplicates_skipped": 410175,
+            "error": null,
+            "mixture_percent": 0.02786332,
+            "name": "claudios/code_search_net",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "fallback CodeSearchNet Python mirror",
+            "skipped_duplicates": 410175,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 696583
+          },
+          {
+            "bytes_kept": 8503335451,
+            "bytes_used": 8503335451,
+            "config_name": null,
+            "docs_kept": 875476,
+            "docs_read": 877919,
+            "documents_tokenized": 875476,
+            "documents_used": 875476,
+            "duplicates_skipped": 629,
+            "error": null,
+            "mixture_percent": 90.2167268,
+            "name": "codeparrot/codeparrot-clean",
+            "optional": false,
+            "reason": "max_total_tokens reached",
+            "role": "main clean Python source corpus",
+            "skipped_duplicates": 629,
+            "skipped_empty": 0,
+            "skipped_too_long": 1814,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": null,
+            "target_tokens": null,
+            "tokens_produced": 2255418170
+          }
+        ],
+        "dedupe_exact": true,
+        "disk_check": {
+          "expected_peak_bytes": 10000000000,
+          "free_bytes": 942883528704,
+          "free_gib": 878.1287155151367,
+          "required_bytes": 20737418240
+        },
+        "elapsed_sec": 3576.667398944999,
+        "estimated_512_token_sequences": 4785156,
+        "estimated_epochs_for_planned_run": 0.0668734693877551,
+        "examples": 1384374,
+        "max_bytes_per_dataset": 20000000000,
+        "max_docs_per_dataset": 1500000,
+        "max_file_chars": 200000,
+        "max_token_id": 32767,
+        "max_total_tokens": 2500000000,
+        "metadata_path": "data/generated/python_hf_mix_2p5b/metadata.json",
+        "planned_batch_size": 32,
+        "planned_steps": 10000,
+        "planned_tokens": 163840000,
+        "pretokenized": true,
+        "seq_len": 512,
+        "shuffle_seed": 1234,
+        "source": "local_dataset_path_redacted",
+        "source_tokenizer_path": "data_prepared/python_syntax_512/tokenizer.json",
+        "split": "train.bin/val.bin",
+        "status": "complete",
+        "streaming_note": "large-corpus path writes token chunks directly and does not globally shuffle documents",
+        "streaming_write": true,
+        "token_dtype": "uint16",
+        "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+        "tokenizer_status": "copied_existing:data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_vocab_size": 32768,
+        "tokens_per_sec_prep": 698974.6937994343,
+        "total_tokens": 2500000000,
+        "total_tokens_loaded": 2500000000,
+        "train_bin": {
+          "bytes": 4900000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/train.bin",
+          "sha256": "a780857e61d7527d6cdd6a7da027c6493ec5272c23e4f101f356879a5543e537"
+        },
+        "train_path": "data/generated/python_hf_mix_2p5b/train.bin",
+        "train_token_count": 2450000000,
+        "train_tokens": 2450000000,
+        "val_bin": {
+          "bytes": 100000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/val.bin",
+          "sha256": "8e08573f88e779ccb6e0e8a0c93447a784dd4932466ef4fd1f50b4f5ba73e674"
+        },
+        "val_path": "data/generated/python_hf_mix_2p5b/val.bin",
+        "val_token_count": 50000000,
+        "validation_tokens": 50000000,
+        "vocab_size": 32768
+      },
+      "dtype": "float16",
+      "estimated_total_training_flops_per_token": 1479708672.0,
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_quality_1500.yaml --track chainrule_amp_optimized_1500,mono_ue1_amp_optimized_1500,mono_ue2_amp_optimized_1500,warmup100_chainrule_then_mono_ue2_1500,warmup250_chainrule_then_mono_ue2_1500,warmup500_chainrule_then_mono_ue2_1500,mono_ue2_anchor17_amp_optimized_1500",
+      "final_train_ce": 5.208576679229736,
+      "final_val_ce": 5.7704325914382935,
+      "final_val_ppl": 320.6764245224457,
+      "full_chainrule_anchor_updates": 0,
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "generated_samples": {
+        "# Task:\nWrite a function": "# Task:\nWrite a function General _code_x_value_id_time_hash_ '=_STORE_data_equal(len_line_name, data_start_target_src_URL=user_all()\nfrom_FILE_doesnt_id_size_id_accounting(id %s\"\n\t\t temporarily\n#    if isinstance_idain_NAME_description:\n                \"unit_iterkeys_service_pb-threadclient.urls_PYTHON_GROUP_key",
+        "def add(a, b):": "def add(a, b):\n        # data = \"%s[1+ = result == 0\n    # return data in g=namespace.value=None=None, kwargs_node=None,r=User=None=False.errors.bind=np_vATE_model_name='set_i]\n    def pos=None,\n        error=None=fr_url.name=False['level_unique_list = 'scale=None_id', 'volume_MOT_"
+      },
+      "generation_outside_timed_loop": true,
+      "git_commit_hash": "ca4f32f6b55eb89dd08e5395a608d5ed175b2560",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "grad_nonfinite_event_count": 0,
+      "grad_nonfinite_steps_sample": [],
+      "grad_scaler_enabled": true,
+      "grad_scaler_history_checkpoints": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 500
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 750
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1000
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1500
+        }
+      ],
+      "grad_scaler_history_sample": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 4
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 5
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 6
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 7
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 8
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 9
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 10
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 11
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 12
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 13
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 14
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 15
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 16
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 17
+        }
+      ],
+      "grad_scaler_overflow_count": 0,
+      "grad_scaler_value": 65536.0,
+      "gradients_finite": true,
+      "heads": 16,
+      "hidden": 1024,
+      "initial_train_ce": 10.536659240722656,
+      "initial_val_ce": 10.534667015075684,
+      "kl_alpha": null,
+      "kl_distillation": false,
+      "kl_temperature": null,
+      "layers": 24,
+      "max_seconds": null,
+      "mean_ms_step": 118.56990618798227,
+      "model_init_seed": 42,
+      "model_parameter_dtype": "float32",
+      "nan_or_inf": false,
+      "normal_mono_updates": 625,
+      "optimizer": "AdamW",
+      "optimizer_fused_requested": true,
+      "optimizer_state_dtypes": [
+        "float32"
+      ],
+      "optimizer_step_attempts": 875,
+      "optimizer_updates": 875,
+      "p50_ms_step": 177.43412500021805,
+      "p90_ms_step": 196.8735820009897,
+      "p99_ms_step": 205.9045040005003,
+      "peak_cuda_memory_allocated_gb": 9.032321536,
+      "peak_cuda_memory_gb": 9.032321536,
+      "peak_cuda_memory_reserved_gb": 10.164895744,
+      "precision_mode": "amp_fp16",
+      "requested_steps": 1500,
+      "same_data_order_seed": true,
+      "same_seed_initial_weights": true,
+      "sdpa_backend_status": {
+        "cuda_available": true,
+        "cudnn_sdp_enabled": true,
+        "flash_attention_available": true,
+        "flash_sdp_enabled": true,
+        "fp16_bf16_reduction_math_sdp_allowed": false,
+        "math_sdp_enabled": true,
+        "mem_efficient_sdp_enabled": true
+      },
+      "seq": 512,
+      "skipped_anchor_collisions": 0,
+      "skipped_optimizer_steps": 0,
+      "steps": 1500,
+      "tokenizer_excluded_from_timing": true,
+      "tokens_processed": 1533000,
+      "tokens_sec": 8619.387776015508,
+      "torch_version": "2.11.0+cu128",
+      "total_params": 369927168,
+      "track": "warmup250_chainrule_then_mono_ue2_1500",
+      "train_batch_seed": 42,
+      "trainable_params": 369927168,
+      "true_dense_active": true,
+      "update_every": 2,
+      "val_batch_seed": 1042,
+      "val_ce_delta": 4.76423442363739,
+      "validation_history": [
+        {
+          "elapsed_seconds": 46.47468879000007,
+          "step": 250,
+          "train_ce": 6.583794593811035,
+          "val_ce": 6.2100324630737305
+        },
+        {
+          "elapsed_seconds": 72.58169193600042,
+          "step": 500,
+          "train_ce": 6.319949150085449,
+          "val_ce": 6.087389945983887
+        },
+        {
+          "elapsed_seconds": 100.00328615300168,
+          "step": 750,
+          "train_ce": 5.5437846183776855,
+          "val_ce": 5.947177946567535
+        },
+        {
+          "elapsed_seconds": 127.20504277500004,
+          "step": 1000,
+          "train_ce": 6.551723957061768,
+          "val_ce": 5.925056517124176
+        },
+        {
+          "elapsed_seconds": 153.4476533320012,
+          "step": 1250,
+          "train_ce": 5.687929630279541,
+          "val_ce": 5.817468345165253
+        },
+        {
+          "elapsed_seconds": 179.64895821700156,
+          "step": 1500,
+          "train_ce": 5.208576679229736,
+          "val_ce": 5.7704325914382935
+        }
+      ],
+      "validation_outside_timed_loop": true,
+      "vocab": 32768,
+      "wall_clock_seconds": 179.64896155500173,
+      "warmup_chainrule_updates": 250,
+      "warmup_grad_nonfinite_steps": [],
+      "warmup_optimizer_step_attempts": 3,
+      "warmup_optimizer_updates": 3,
+      "warmup_skipped_optimizer_steps": 0,
+      "warmup_steps": 250
+    },
+    {
+      "active_layers": 24,
+      "active_params": 369927168,
+      "amp_enabled": true,
+      "anchor_interval": null,
+      "anchor_updates_separate_from_mono_updates": true,
+      "attention_impl": "sdpa",
+      "autocast_dtype": "float16",
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "batch": 2,
+      "ce_improvement_per_1b_tokens": 3139.6665374049157,
+      "ce_improvement_per_minute": 1.4348941061552902,
+      "completed": true,
+      "cuda_reset_peak_memory_before_timed_loop": true,
+      "cuda_synchronize_each_step": true,
+      "cuda_version": "12.8",
+      "dataset": "python_hf_mix_2p5b",
+      "dataset_check": {
+        "actual": {
+          "dataset": "python_hf_mix_2p5b",
+          "pretokenized": true,
+          "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+          "tokenizer_type": "bytelevel_bpe",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "expected": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "matches": true,
+        "mismatches": {}
+      },
+      "dataset_metadata": {
+        "dataset": "python_hf_mix_2p5b",
+        "dataset_mix": "python-hf-mix",
+        "dataset_path": "data/generated/python_hf_mix_2p5b",
+        "datasets_used": [
+          {
+            "bytes_kept": 468328786,
+            "bytes_used": 468328786,
+            "config_name": null,
+            "docs_kept": 51652,
+            "docs_read": 51749,
+            "documents_tokenized": 51652,
+            "documents_used": 51652,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 5.0,
+            "name": "codeparrot/codeparrot-clean-valid",
+            "optional": false,
+            "reason": "source token target reached",
+            "role": "small clean Python source supplement",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 97,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 125000000
+          },
+          {
+            "bytes_kept": 482288783,
+            "bytes_used": 482288783,
+            "config_name": null,
+            "docs_kept": 455243,
+            "docs_read": 455243,
+            "documents_tokenized": 455243,
+            "documents_used": 455243,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 4.75540988,
+            "name": "Nan-Do/code-search-net-python",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "CodeSearchNet Python functions with summaries/docstrings",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.1,
+            "target_tokens": 250000000,
+            "tokens_produced": 118885247
+          },
+          {
+            "bytes_kept": 2790044,
+            "bytes_used": 2790044,
+            "config_name": "python",
+            "docs_kept": 2003,
+            "docs_read": 412178,
+            "documents_tokenized": 2003,
+            "documents_used": 2003,
+            "duplicates_skipped": 410175,
+            "error": null,
+            "mixture_percent": 0.02786332,
+            "name": "claudios/code_search_net",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "fallback CodeSearchNet Python mirror",
+            "skipped_duplicates": 410175,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 696583
+          },
+          {
+            "bytes_kept": 8503335451,
+            "bytes_used": 8503335451,
+            "config_name": null,
+            "docs_kept": 875476,
+            "docs_read": 877919,
+            "documents_tokenized": 875476,
+            "documents_used": 875476,
+            "duplicates_skipped": 629,
+            "error": null,
+            "mixture_percent": 90.2167268,
+            "name": "codeparrot/codeparrot-clean",
+            "optional": false,
+            "reason": "max_total_tokens reached",
+            "role": "main clean Python source corpus",
+            "skipped_duplicates": 629,
+            "skipped_empty": 0,
+            "skipped_too_long": 1814,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": null,
+            "target_tokens": null,
+            "tokens_produced": 2255418170
+          }
+        ],
+        "dedupe_exact": true,
+        "disk_check": {
+          "expected_peak_bytes": 10000000000,
+          "free_bytes": 942883528704,
+          "free_gib": 878.1287155151367,
+          "required_bytes": 20737418240
+        },
+        "elapsed_sec": 3576.667398944999,
+        "estimated_512_token_sequences": 4785156,
+        "estimated_epochs_for_planned_run": 0.0668734693877551,
+        "examples": 1384374,
+        "max_bytes_per_dataset": 20000000000,
+        "max_docs_per_dataset": 1500000,
+        "max_file_chars": 200000,
+        "max_token_id": 32767,
+        "max_total_tokens": 2500000000,
+        "metadata_path": "data/generated/python_hf_mix_2p5b/metadata.json",
+        "planned_batch_size": 32,
+        "planned_steps": 10000,
+        "planned_tokens": 163840000,
+        "pretokenized": true,
+        "seq_len": 512,
+        "shuffle_seed": 1234,
+        "source": "local_dataset_path_redacted",
+        "source_tokenizer_path": "data_prepared/python_syntax_512/tokenizer.json",
+        "split": "train.bin/val.bin",
+        "status": "complete",
+        "streaming_note": "large-corpus path writes token chunks directly and does not globally shuffle documents",
+        "streaming_write": true,
+        "token_dtype": "uint16",
+        "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+        "tokenizer_status": "copied_existing:data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_vocab_size": 32768,
+        "tokens_per_sec_prep": 698974.6937994343,
+        "total_tokens": 2500000000,
+        "total_tokens_loaded": 2500000000,
+        "train_bin": {
+          "bytes": 4900000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/train.bin",
+          "sha256": "a780857e61d7527d6cdd6a7da027c6493ec5272c23e4f101f356879a5543e537"
+        },
+        "train_path": "data/generated/python_hf_mix_2p5b/train.bin",
+        "train_token_count": 2450000000,
+        "train_tokens": 2450000000,
+        "val_bin": {
+          "bytes": 100000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/val.bin",
+          "sha256": "8e08573f88e779ccb6e0e8a0c93447a784dd4932466ef4fd1f50b4f5ba73e674"
+        },
+        "val_path": "data/generated/python_hf_mix_2p5b/val.bin",
+        "val_token_count": 50000000,
+        "validation_tokens": 50000000,
+        "vocab_size": 32768
+      },
+      "dtype": "float16",
+      "estimated_total_training_flops_per_token": 1479708672.0,
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_quality_1500.yaml --track chainrule_amp_optimized_1500,mono_ue1_amp_optimized_1500,mono_ue2_amp_optimized_1500,warmup100_chainrule_then_mono_ue2_1500,warmup250_chainrule_then_mono_ue2_1500,warmup500_chainrule_then_mono_ue2_1500,mono_ue2_anchor17_amp_optimized_1500",
+      "final_train_ce": 5.168492794036865,
+      "final_val_ce": 5.721558213233948,
+      "final_val_ppl": 305.38040019421163,
+      "full_chainrule_anchor_updates": 0,
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "generated_samples": {
+        "# Task:\nWrite a function": "# Task:\nWrite a function General _code_x_value_id:\n        if m_ '=_path_data:\n        elif fieldsconom_tasks_match_id:\n            load_src_URL = range_all()\n        if not None:\n            elif None:\n                for data_accounting(id %s = i in sorted_id)\n        c_arguments_NAME_id:\n                \"unit_iterkeys_class_pb.thread_FORMAT_op_x_in_",
+        "def add(a, b):": "def add(a, b):\n        # program = \"%sFormat = [2,\n            else:\n                return data in g[0]\n        # list(self, kwargs_node))\n        self.numUser.debug_query.assertEqual(1) > 1:\n            # In_label_set_i]\n        if self._params_pypi(unittest_msg, uid_mailbox\n        # vol['level_unique_list = self.display(\"py_response)\n        self._set"
+      },
+      "generation_outside_timed_loop": true,
+      "git_commit_hash": "ca4f32f6b55eb89dd08e5395a608d5ed175b2560",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "grad_nonfinite_event_count": 0,
+      "grad_nonfinite_steps_sample": [],
+      "grad_scaler_enabled": true,
+      "grad_scaler_history_checkpoints": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 500
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 750
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1000
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1500
+        }
+      ],
+      "grad_scaler_history_sample": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 4
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 5
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 6
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 7
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 8
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 9
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 10
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 11
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 12
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 13
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 14
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 15
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 16
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 17
+        }
+      ],
+      "grad_scaler_overflow_count": 0,
+      "grad_scaler_value": 65536.0,
+      "gradients_finite": true,
+      "heads": 16,
+      "hidden": 1024,
+      "initial_train_ce": 10.536659240722656,
+      "initial_val_ce": 10.534667015075684,
+      "kl_alpha": null,
+      "kl_distillation": false,
+      "kl_temperature": null,
+      "layers": 24,
+      "max_seconds": null,
+      "mean_ms_step": 132.97253082466827,
+      "model_init_seed": 42,
+      "model_parameter_dtype": "float32",
+      "nan_or_inf": false,
+      "normal_mono_updates": 500,
+      "optimizer": "AdamW",
+      "optimizer_fused_requested": true,
+      "optimizer_state_dtypes": [
+        "float32"
+      ],
+      "optimizer_step_attempts": 1000,
+      "optimizer_updates": 1000,
+      "p50_ms_step": 182.2558019994176,
+      "p90_ms_step": 198.2670790002885,
+      "p99_ms_step": 205.94288800020877,
+      "peak_cuda_memory_allocated_gb": 9.032321536,
+      "peak_cuda_memory_gb": 9.032321536,
+      "peak_cuda_memory_reserved_gb": 10.164895744,
+      "precision_mode": "amp_fp16",
+      "requested_steps": 1500,
+      "same_data_order_seed": true,
+      "same_seed_initial_weights": true,
+      "sdpa_backend_status": {
+        "cuda_available": true,
+        "cudnn_sdp_enabled": true,
+        "flash_attention_available": true,
+        "flash_sdp_enabled": true,
+        "fp16_bf16_reduction_math_sdp_allowed": false,
+        "math_sdp_enabled": true,
+        "mem_efficient_sdp_enabled": true
+      },
+      "seq": 512,
+      "skipped_anchor_collisions": 0,
+      "skipped_optimizer_steps": 0,
+      "steps": 1500,
+      "tokenizer_excluded_from_timing": true,
+      "tokens_processed": 1533000,
+      "tokens_sec": 7685.797913762838,
+      "torch_version": "2.11.0+cu128",
+      "total_params": 369927168,
+      "track": "warmup500_chainrule_then_mono_ue2_1500",
+      "train_batch_seed": 42,
+      "trainable_params": 369927168,
+      "true_dense_active": true,
+      "update_every": 2,
+      "val_batch_seed": 1042,
+      "val_ce_delta": 4.813108801841736,
+      "validation_history": [
+        {
+          "elapsed_seconds": 47.91667872400103,
+          "step": 250,
+          "train_ce": 6.583773612976074,
+          "val_ce": 6.210039854049683
+        },
+        {
+          "elapsed_seconds": 93.76902218100076,
+          "step": 500,
+          "train_ce": 6.228859901428223,
+          "val_ce": 5.956130385398865
+        },
+        {
+          "elapsed_seconds": 120.60156155100049,
+          "step": 750,
+          "train_ce": 5.450222969055176,
+          "val_ce": 5.860033094882965
+        },
+        {
+          "elapsed_seconds": 147.08330519000083,
+          "step": 1000,
+          "train_ce": 6.485513687133789,
+          "val_ce": 5.855869710445404
+        },
+        {
+          "elapsed_seconds": 173.6530791999994,
+          "step": 1250,
+          "train_ce": 5.636876106262207,
+          "val_ce": 5.765348672866821
+        },
+        {
+          "elapsed_seconds": 201.25981716000024,
+          "step": 1500,
+          "train_ce": 5.168492794036865,
+          "val_ce": 5.721558213233948
+        }
+      ],
+      "validation_outside_timed_loop": true,
+      "vocab": 32768,
+      "wall_clock_seconds": 201.25981901500018,
+      "warmup_chainrule_updates": 500,
+      "warmup_grad_nonfinite_steps": [],
+      "warmup_optimizer_step_attempts": 3,
+      "warmup_optimizer_updates": 3,
+      "warmup_skipped_optimizer_steps": 0,
+      "warmup_steps": 500
+    },
+    {
+      "active_layers": 24,
+      "active_params": 369927168,
+      "amp_enabled": true,
+      "anchor_interval": 17,
+      "anchor_updates_separate_from_mono_updates": true,
+      "attention_impl": "sdpa",
+      "autocast_dtype": "float16",
+      "aux_loss": false,
+      "aux_loss_weights": {},
+      "batch": 2,
+      "ce_improvement_per_1b_tokens": 3093.209052039219,
+      "ce_improvement_per_minute": 1.6822956224853798,
+      "completed": true,
+      "cuda_reset_peak_memory_before_timed_loop": true,
+      "cuda_synchronize_each_step": true,
+      "cuda_version": "12.8",
+      "dataset": "python_hf_mix_2p5b",
+      "dataset_check": {
+        "actual": {
+          "dataset": "python_hf_mix_2p5b",
+          "pretokenized": true,
+          "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+          "tokenizer_type": "bytelevel_bpe",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "expected": {
+          "dataset": "python_hf_mix_2p5b",
+          "train_tokens": 2450000000,
+          "validation_tokens": 50000000,
+          "vocab_size": 32768
+        },
+        "matches": true,
+        "mismatches": {}
+      },
+      "dataset_metadata": {
+        "dataset": "python_hf_mix_2p5b",
+        "dataset_mix": "python-hf-mix",
+        "dataset_path": "data/generated/python_hf_mix_2p5b",
+        "datasets_used": [
+          {
+            "bytes_kept": 468328786,
+            "bytes_used": 468328786,
+            "config_name": null,
+            "docs_kept": 51652,
+            "docs_read": 51749,
+            "documents_tokenized": 51652,
+            "documents_used": 51652,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 5.0,
+            "name": "codeparrot/codeparrot-clean-valid",
+            "optional": false,
+            "reason": "source token target reached",
+            "role": "small clean Python source supplement",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 97,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 125000000
+          },
+          {
+            "bytes_kept": 482288783,
+            "bytes_used": 482288783,
+            "config_name": null,
+            "docs_kept": 455243,
+            "docs_read": 455243,
+            "documents_tokenized": 455243,
+            "documents_used": 455243,
+            "duplicates_skipped": 0,
+            "error": null,
+            "mixture_percent": 4.75540988,
+            "name": "Nan-Do/code-search-net-python",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "CodeSearchNet Python functions with summaries/docstrings",
+            "skipped_duplicates": 0,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.1,
+            "target_tokens": 250000000,
+            "tokens_produced": 118885247
+          },
+          {
+            "bytes_kept": 2790044,
+            "bytes_used": 2790044,
+            "config_name": "python",
+            "docs_kept": 2003,
+            "docs_read": 412178,
+            "documents_tokenized": 2003,
+            "documents_used": 2003,
+            "duplicates_skipped": 410175,
+            "error": null,
+            "mixture_percent": 0.02786332,
+            "name": "claudios/code_search_net",
+            "optional": true,
+            "reason": "source exhausted",
+            "role": "fallback CodeSearchNet Python mirror",
+            "skipped_duplicates": 410175,
+            "skipped_empty": 0,
+            "skipped_too_long": 0,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": 0.05,
+            "target_tokens": 125000000,
+            "tokens_produced": 696583
+          },
+          {
+            "bytes_kept": 8503335451,
+            "bytes_used": 8503335451,
+            "config_name": null,
+            "docs_kept": 875476,
+            "docs_read": 877919,
+            "documents_tokenized": 875476,
+            "documents_used": 875476,
+            "duplicates_skipped": 629,
+            "error": null,
+            "mixture_percent": 90.2167268,
+            "name": "codeparrot/codeparrot-clean",
+            "optional": false,
+            "reason": "max_total_tokens reached",
+            "role": "main clean Python source corpus",
+            "skipped_duplicates": 629,
+            "skipped_empty": 0,
+            "skipped_too_long": 1814,
+            "skipped_too_short": 0,
+            "split": "train",
+            "status": "used",
+            "target_fraction": null,
+            "target_tokens": null,
+            "tokens_produced": 2255418170
+          }
+        ],
+        "dedupe_exact": true,
+        "disk_check": {
+          "expected_peak_bytes": 10000000000,
+          "free_bytes": 942883528704,
+          "free_gib": 878.1287155151367,
+          "required_bytes": 20737418240
+        },
+        "elapsed_sec": 3576.667398944999,
+        "estimated_512_token_sequences": 4785156,
+        "estimated_epochs_for_planned_run": 0.0668734693877551,
+        "examples": 1384374,
+        "max_bytes_per_dataset": 20000000000,
+        "max_docs_per_dataset": 1500000,
+        "max_file_chars": 200000,
+        "max_token_id": 32767,
+        "max_total_tokens": 2500000000,
+        "metadata_path": "data/generated/python_hf_mix_2p5b/metadata.json",
+        "planned_batch_size": 32,
+        "planned_steps": 10000,
+        "planned_tokens": 163840000,
+        "pretokenized": true,
+        "seq_len": 512,
+        "shuffle_seed": 1234,
+        "source": "local_dataset_path_redacted",
+        "source_tokenizer_path": "data_prepared/python_syntax_512/tokenizer.json",
+        "split": "train.bin/val.bin",
+        "status": "complete",
+        "streaming_note": "large-corpus path writes token chunks directly and does not globally shuffle documents",
+        "streaming_write": true,
+        "token_dtype": "uint16",
+        "tokenizer_path": "data_prepared/python_hf_mix_512_2p5b/tokenizer.json",
+        "tokenizer_status": "copied_existing:data_prepared/python_syntax_512/tokenizer.json",
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_vocab_size": 32768,
+        "tokens_per_sec_prep": 698974.6937994343,
+        "total_tokens": 2500000000,
+        "total_tokens_loaded": 2500000000,
+        "train_bin": {
+          "bytes": 4900000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/train.bin",
+          "sha256": "a780857e61d7527d6cdd6a7da027c6493ec5272c23e4f101f356879a5543e537"
+        },
+        "train_path": "data/generated/python_hf_mix_2p5b/train.bin",
+        "train_token_count": 2450000000,
+        "train_tokens": 2450000000,
+        "val_bin": {
+          "bytes": 100000000,
+          "dtype": "uint16",
+          "path": "data_prepared/python_hf_mix_512_2p5b/val.bin",
+          "sha256": "8e08573f88e779ccb6e0e8a0c93447a784dd4932466ef4fd1f50b4f5ba73e674"
+        },
+        "val_path": "data/generated/python_hf_mix_2p5b/val.bin",
+        "val_token_count": 50000000,
+        "validation_tokens": 50000000,
+        "vocab_size": 32768
+      },
+      "dtype": "float16",
+      "estimated_total_training_flops_per_token": 1479708672.0,
+      "exact_command": "scripts/bench_dense313m_loss_recovery.py --config configs/dense313m_python_hf_mix_quality_1500.yaml --track chainrule_amp_optimized_1500,mono_ue1_amp_optimized_1500,mono_ue2_amp_optimized_1500,warmup100_chainrule_then_mono_ue2_1500,warmup250_chainrule_then_mono_ue2_1500,warmup500_chainrule_then_mono_ue2_1500,mono_ue2_anchor17_amp_optimized_1500",
+      "final_train_ce": 5.226095199584961,
+      "final_val_ce": 5.7927775382995605,
+      "final_val_ppl": 327.9225781511075,
+      "full_chainrule_anchor_updates": 44,
+      "fused_optimizer": true,
+      "fused_optimizer_error": null,
+      "generated_samples": {
+        "# Task:\nWrite a function": "# Task:\nWrite a function General Public License import import existing.geometry_entry_grad_set_color)\n# useful and the License\n#\n# `hashHandler:\nimportorters_Progress:\n        range(this:\n            login = sum(return_id, Version\n            raise [],accounting(id %s\"\n\t\t,\n#    if isinstance(self):\n        _path.error(request(self)au_files(self):\n                # If strings.fields):\n        return",
+        "def add(a, b):": "def add(a, b):\n        # data = np.Format = [2,\n            else:\n                return\n            6. fields.name, or list(\n            RH(y_sequence(priority.numUser.debug=False):\n       mod_h\")\n        - context = np = np.set_i]\n                if h = 1, MAC(unittest=2, data=mailbox\n        return vol['level_unique_list = np.display\n        x_response)\n        break\n        self"
+      },
+      "generation_outside_timed_loop": true,
+      "git_commit_hash": "ca4f32f6b55eb89dd08e5395a608d5ed175b2560",
+      "gpu_name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "grad_nonfinite_event_count": 0,
+      "grad_nonfinite_steps_sample": [],
+      "grad_scaler_enabled": true,
+      "grad_scaler_history_checkpoints": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 500
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 750
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1000
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1250
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 1500
+        }
+      ],
+      "grad_scaler_history_sample": [
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -3
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": -1
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 2
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 4
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 6
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 8
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 10
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 12
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 14
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 16
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 17
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 18
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 20
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 22
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 24
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 26
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 28
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 30
+        },
+        {
+          "scale_after": 65536.0,
+          "scale_before": 65536.0,
+          "skipped_optimizer_step": false,
+          "step": 32
+        }
+      ],
+      "grad_scaler_overflow_count": 0,
+      "grad_scaler_value": 65536.0,
+      "gradients_finite": true,
+      "heads": 16,
+      "hidden": 1024,
+      "initial_train_ce": 10.536659240722656,
+      "initial_val_ce": 10.534667015075684,
+      "kl_alpha": null,
+      "kl_distillation": false,
+      "kl_temperature": null,
+      "layers": 24,
+      "max_seconds": null,
+      "mean_ms_step": 111.5329349813328,
+      "model_init_seed": 42,
+      "model_parameter_dtype": "float32",
+      "nan_or_inf": false,
+      "normal_mono_updates": 750,
+      "optimizer": "AdamW",
+      "optimizer_fused_requested": true,
+      "optimizer_state_dtypes": [
+        "float32"
+      ],
+      "optimizer_step_attempts": 794,
+      "optimizer_updates": 794,
+      "p50_ms_step": 176.61130700071226,
+      "p90_ms_step": 200.17410599939467,
+      "p99_ms_step": 207.41563599949586,
+      "peak_cuda_memory_allocated_gb": 9.032321536,
+      "peak_cuda_memory_gb": 9.032321536,
+      "peak_cuda_memory_reserved_gb": 10.164895744,
+      "precision_mode": "amp_fp16",
+      "requested_steps": 1500,
+      "same_data_order_seed": true,
+      "same_seed_initial_weights": true,
+      "sdpa_backend_status": {
+        "cuda_available": true,
+        "cudnn_sdp_enabled": true,
+        "flash_attention_available": true,
+        "flash_sdp_enabled": true,
+        "fp16_bf16_reduction_math_sdp_allowed": false,
+        "math_sdp_enabled": true,
+        "mem_efficient_sdp_enabled": true
+      },
+      "seq": 512,
+      "skipped_anchor_collisions": 44,
+      "skipped_optimizer_steps": 0,
+      "steps": 1500,
+      "tokenizer_excluded_from_timing": true,
+      "tokens_processed": 1533000,
+      "tokens_sec": 9163.212643611068,
+      "torch_version": "2.11.0+cu128",
+      "total_params": 369927168,
+      "track": "mono_ue2_anchor17_amp_optimized_1500",
+      "train_batch_seed": 42,
+      "trainable_params": 369927168,
+      "true_dense_active": true,
+      "update_every": 2,
+      "val_batch_seed": 1042,
+      "val_ce_delta": 4.741889476776123,
+      "validation_history": [
+        {
+          "elapsed_seconds": 28.132882947000326,
+          "step": 250,
+          "train_ce": 6.979238510131836,
+          "val_ce": 6.539997220039368
+        },
+        {
+          "elapsed_seconds": 56.01167931600139,
+          "step": 500,
+          "train_ce": 6.417168617248535,
+          "val_ce": 6.227433800697327
+        },
+        {
+          "elapsed_seconds": 83.60455291700055,
+          "step": 750,
+          "train_ce": 5.563160419464111,
+          "val_ce": 6.031024158000946
+        },
+        {
+          "elapsed_seconds": 112.84759466700052,
+          "step": 1000,
+          "train_ce": 6.651450157165527,
+          "val_ce": 6.009589850902557
+        },
+        {
+          "elapsed_seconds": 141.70040869700097,
+          "step": 1250,
+          "train_ce": 5.7454328536987305,
+          "val_ce": 5.86516660451889
+        },
+        {
+          "elapsed_seconds": 169.12209801000063,
+          "step": 1500,
+          "train_ce": 5.226095199584961,
+          "val_ce": 5.7927775382995605
+        }
+      ],
+      "validation_outside_timed_loop": true,
+      "vocab": 32768,
+      "wall_clock_seconds": 169.1221000660007,
+      "warmup_chainrule_updates": 0,
+      "warmup_grad_nonfinite_steps": [],
+      "warmup_optimizer_step_attempts": 3,
+      "warmup_optimizer_updates": 3,
+      "warmup_skipped_optimizer_steps": 0,
+      "warmup_steps": 0
+    }
+  ],
+  "sdpa_backend_status": {
+    "cuda_available": true,
+    "cudnn_sdp_enabled": true,
+    "flash_attention_available": true,
+    "flash_sdp_enabled": true,
+    "fp16_bf16_reduction_math_sdp_allowed": false,
+    "math_sdp_enabled": true,
+    "mem_efficient_sdp_enabled": true
+  },
+  "versions": {
+    "cuda": "12.8",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+    "python": "3.12.3",
+    "torch": "2.11.0+cu128",
+    "triton": "3.6.0"
+  }
+}

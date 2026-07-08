@@ -1,0 +1,67 @@
+name: dense313m_optimized_fairness_500
+dataset: mbpp_smoke
+audit_label: smoke loss-mechanics audit; not a coding benchmark
+seed: 42
+layers: 24
+hidden: 1024
+heads: 16
+seq_len: 512
+batch_size: 2
+steps: 500
+dtype: float16
+amp: true
+precision_mode: amp_fp16
+parameter_dtype: fp32
+attention_impl: sdpa
+force_enable_flash_sdpa: true
+lr: 3.0e-4
+weight_decay: 0.01
+grad_clip: 1.0
+warmup_timed_steps: 3
+eval_batches: 8
+sample_tokens: 96
+report_path: RESULTS_DENSE313M_OPTIMIZED_FAIRNESS_500_v1.md
+run_prefix: dense313m_optimized_fairness_500
+latest_json: runs/dense313m_optimized_fairness_500_latest.json
+expected_dataset_metadata:
+  dataset: mbpp_smoke
+  train_tokens: 62595
+  validation_tokens: 7025
+  vocab_size: 5037
+generation_prompts:
+  - "def add(a, b):"
+  - "# Task:\nWrite a function"
+
+tracks:
+  chainrule_amp_optimized_500:
+    training_rule: chainrule
+    update_every: 1
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500
+  mono_ue2_amp_optimized_500:
+    training_rule: mono
+    update_every: 2
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500
+  mono_ue4_amp_optimized_500:
+    training_rule: mono
+    update_every: 4
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500
+  mono_ue2_anchor17_amp_optimized_500:
+    training_rule: mono
+    update_every: 2
+    anchor_interval: 17
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500
+  mono_ue4_anchor17_amp_optimized_500:
+    training_rule: mono
+    update_every: 4
+    anchor_interval: 17
+    fused_adamw: true
+    grad_clip: 1.0
+    steps: 500

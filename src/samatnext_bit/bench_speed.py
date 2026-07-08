@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import argparse
 import itertools
+import json
 import math
 import statistics
 import time
 from pathlib import Path
+from typing import Any
 
 import torch
 import yaml
@@ -108,6 +110,60 @@ def grad_norm_and_finite(model: torch.nn.Module) -> tuple[float, bool]:
         finite = finite and bool(torch.isfinite(g).all().item())
         total_sq += float(g.float().pow(2).sum().item())
     return math.sqrt(total_sq), finite
+
+
+def load_pretokenized_smoke_dataset(dataset: str, root: Path, build_hint: str, source: str) -> tuple[torch.Tensor, torch.Tensor, dict[str, Any], Any]:
+    train_path = root / "train_ids.pt"
+    val_path = root / "val_ids.pt"
+    tokenizer_path = root / "tokenizer.json"
+    if not train_path.exists() or not val_path.exists() or not tokenizer_path.exists():
+        raise FileNotFoundError(build_hint)
+    train_data = torch.load(train_path, map_location="cpu").long()
+    val_data = torch.load(val_path, map_location="cpu").long()
+    from tokenizers import Tokenizer
+
+    tokenizer = Tokenizer.from_file(str(tokenizer_path))
+    metadata = {}
+    metadata_path = root / "metadata.json"
+    if metadata_path.exists():
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    meta = {
+        "dataset": dataset,
+        "source": metadata.get("dataset_source", source),
+        "vocab_size": int(tokenizer.get_vocab_size()),
+        "total_tokens_loaded": int(train_data.numel() + val_data.numel()),
+        "train_tokens": int(train_data.numel()),
+        "validation_tokens": int(val_data.numel()),
+        "tokenizer_type": "bytelevel_bpe",
+        "tokenizer_path": str(tokenizer_path),
+        "pretokenized": True,
+        **metadata,
+    }
+    return train_data, val_data, meta, tokenizer
+
+
+def load_mbpp_smoke(dev: torch.device | None = None) -> tuple[torch.Tensor, torch.Tensor, dict[str, Any], Any]:
+    return load_pretokenized_smoke_dataset(
+        "mbpp_smoke",
+        Path("data/mbpp_smoke"),
+        "run scripts/build_mbpp_smoke_corpus.py before mbpp_smoke benchmarks",
+        "Google Research MBPP smoke corpus in data/mbpp_smoke",
+    )
+
+
+def random_token_batches(data: torch.Tensor, batch: int, seq: int, count: int, dev: torch.device, seed: int) -> list[tuple[torch.Tensor, torch.Tensor]]:
+    gen = torch.Generator(device="cpu")
+    gen.manual_seed(seed)
+    max_start = data.numel() - seq - 1
+    if max_start <= 0:
+        raise ValueError(f"dataset has {data.numel()} tokens, need more than seq={seq}")
+    batches = []
+    for _ in range(count):
+        starts = torch.randint(0, max_start, (batch,), generator=gen)
+        x = torch.stack([data[s : s + seq] for s in starts.tolist()]).to(dev)
+        y = torch.stack([data[s + 1 : s + seq + 1] for s in starts.tolist()]).to(dev)
+        batches.append((x, y))
+    return batches
 
 
 def random_byte_batches(
