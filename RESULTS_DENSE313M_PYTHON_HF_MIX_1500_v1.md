@@ -11,9 +11,9 @@ Lower final validation CE is better. Higher CE/min means faster validation CE im
 | Field | Value |
 |---|---|
 | dataset label | python_hf_mix_2p5b |
-| symlink path | data/generated/python_hf_mix_2p5b |
-| source path | /home/samat_zharassov/samatnext-qwen/data_prepared/python_hf_mix_512_2p5b |
-| tokenizer path | data_prepared/python_hf_mix_512_2p5b/tokenizer.json |
+| repository link | data/generated/python_hf_mix_2p5b |
+| source | external dataset linked through the repository path above |
+| tokenizer path | data/generated/python_hf_mix_2p5b/tokenizer.json |
 | tokenizer type | bytelevel_bpe |
 | vocab size | 32768 |
 | train tokens | 2450000000 |

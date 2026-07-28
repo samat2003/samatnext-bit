@@ -11,9 +11,9 @@ Lower final validation CE is better. Higher CE/min means faster validation CE im
 | Field | Value |
 |---|---|
 | dataset label | python_hf_mix_2p5b |
-| symlink path | data/generated/python_hf_mix_2p5b |
-| source path | /home/samat_zharassov/samatnext-qwen/data_prepared/python_hf_mix_512_2p5b |
-| tokenizer path | data_prepared/python_hf_mix_512_2p5b/tokenizer.json |
+| repository link | data/generated/python_hf_mix_2p5b |
+| source | external dataset linked through the repository path above |
+| tokenizer path | data/generated/python_hf_mix_2p5b/tokenizer.json |
 | tokenizer type | bytelevel_bpe |
 | vocab size | 32768 |
 | train tokens | 2450000000 |
@@ -43,7 +43,7 @@ Lower final validation CE is better. Higher CE/min means faster validation CE im
 
 ## KL Distillation
 
-KL distillation skipped: no usable teacher logits/cache exists for the exact python_hf_mix_2p5b dataset/tokenizer/vocab. The only candidate inspected was /home/samat_zharassov/samatnext-qwen/results/samatnext_qwen_gdn8_direct/stage1_teacher_cache_20260623-161900.pt; it contains one batch of input_ids/labels, teacher_hidden_states shaped (1, 512, 1536), and teacher_loss, but no reusable vocab-32768 teacher logits.
+KL distillation skipped: no usable teacher logits/cache exists for the exact python_hf_mix_2p5b dataset/tokenizer/vocab. The only candidate inspected was an external local teacher-cache artifact; it contained one batch of input_ids/labels, teacher_hidden_states shaped (1, 512, 1536), and teacher_loss, but no reusable vocab-32768 teacher logits.
 
 ## Results
 
@@ -74,7 +74,7 @@ KL distillation skipped: no usable teacher logits/cache exists for the exact pyt
 ### chainrule_amp_optimized_1500
 - `# Task:
 Write a function` -> `# Task:\nWrite a function General Public License\n#    (geometry_entry)\n# You '=_version)# # and the License\n#\n#    data groups here='', load the Free Software Foundation version without the License\n#    # If the GNU General Public License for the default: you have\n   ipv, but or **\n#    # The c in the Free Software Foundation (at the GNU General Public Licenseau to the GNU redistribute it will be the GNU General Public License as the`
-- `def add(a, b):` -> `def add(a, b):\n        - (old_version[0+2,0,2,1,0*2,2,5,2,2b,5,0,0,User\2,2.7,2h,1,ATE3,0)\n---\nix7,0,2,02,02,04,\ndef2E6AC(r,2selection2292\nAx05ER*2`
+- `def add(a, b):` -> `def add(a, b):\n        - (old_version[0+2,0,2,1,0*2,2,5,2,2b,5,0,0,User\2,2.7,2h,1,ATE3,0)\n---\nix7,0,2,02,02,04,\ndef2E6AC(r,2selection2292\nAx05ER*2`
 
 ### mono_ue1_amp_optimized_1500
 - `# Task:
@@ -93,7 +93,7 @@ Write a function` -> `# Task:\nWrite a function General _code_x_value_id:\n     
 
 ### warmup250_chainrule_then_mono_ue2_1500
 - `# Task:
-Write a function` -> `# Task:\nWrite a function General _code_x_value_id_time_hash_ '=_STORE_data_equal(len_line_name, data_start_target_src_URL=user_all()\nfrom_FILE_doesnt_id_size_id_accounting(id %s"\n		 temporarily\n#    if isinstance_idain_NAME_description:\n                "unit_iterkeys_service_pb-threadclient.urls_PYTHON_GROUP_key`
+Write a function` -> `# Task:\nWrite a function General _code_x_value_id_time_hash_ '=_STORE_data_equal(len_line_name, data_start_target_src_URL=user_all()\nfrom_FILE_doesnt_id_size_id_accounting(id %s"\n\t\t temporarily\n#    if isinstance_idain_NAME_description:\n                "unit_iterkeys_service_pb-threadclient.urls_PYTHON_GROUP_key`
 - `def add(a, b):` -> `def add(a, b):\n        # data = "%s[1+ = result == 0\n    # return data in g=namespace.value=None=None, kwargs_node=None,r=User=None=False.errors.bind=np_vATE_model_name='set_i]\n    def pos=None,\n        error=None=fr_url.name=False['level_unique_list = 'scale=None_id', 'volume_MOT_`
 
 ### warmup500_chainrule_then_mono_ue2_1500
@@ -103,7 +103,7 @@ Write a function` -> `# Task:\nWrite a function General _code_x_value_id:\n     
 
 ### mono_ue2_anchor17_amp_optimized_1500
 - `# Task:
-Write a function` -> `# Task:\nWrite a function General Public License import import existing.geometry_entry_grad_set_color)\n# useful and the License\n#\n# `hashHandler:\nimportorters_Progress:\n        range(this:\n            login = sum(return_id, Version\n            raise [],accounting(id %s"\n		,\n#    if isinstance(self):\n        _path.error(request(self)au_files(self):\n                # If strings.fields):\n        return`
+Write a function` -> `# Task:\nWrite a function General Public License import import existing.geometry_entry_grad_set_color)\n# useful and the License\n#\n# `hashHandler:\nimportorters_Progress:\n        range(this:\n            login = sum(return_id, Version\n            raise [],accounting(id %s"\n\t\t,\n#    if isinstance(self):\n        _path.error(request(self)au_files(self):\n                # If strings.fields):\n        return`
 - `def add(a, b):` -> `def add(a, b):\n        # data = np.Format = [2,\n            else:\n                return\n            6. fields.name, or list(\n            RH(y_sequence(priority.numUser.debug=False):\n       mod_h")\n        - context = np = np.set_i]\n                if h = 1, MAC(unittest=2, data=mailbox\n        return vol['level_unique_list = np.display\n        x_response)\n        break\n        self`
 
 ## Raw JSON
