@@ -32,6 +32,19 @@ Scheduled mono-forward-style modes still run the model forward, but they schedul
 
 The repo reports the tradeoff instead of treating speed alone as success.
 
+## Minimal Demo
+
+`scheduled_gradient_demo.py` contains the scheduling rule in fewer than 100
+lines. It is sparse update training, not gradient accumulation: every batch
+runs forward, while only batches 1, `1 + UE`, `1 + 2 * UE`, and so on run
+backward and update the model.
+
+![Forward runs every batch; backward and update run only on scheduled batches](assets/update-every.jpg)
+
+```bash
+python scheduled_gradient_demo.py --update-every 4
+```
+
 ## Fast Synthetic Smoke Test
 
 This test uses generated/static CUDA token batches and does not need an external dataset. It is useful for checking the algorithm path and the fastest result class.
