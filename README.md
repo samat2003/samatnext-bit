@@ -116,6 +116,9 @@ Point a dense config at your dataset directory with `dataset_path`, `train_bin`,
 | Dense Python speed mode | ~369.9M params | Python HF mix | best CE/min 2.7024 | worse final CE |
 | Dense scale ceiling | ~313M/369M params | real/smoke corpora | dense 600K tok/s not reached | hardware/compute bound |
 
+<img width="941" height="1672" alt="image" src="https://github.com/user-attachments/assets/ac142d74-404d-4d14-9c56-5f911c562df3" />
+
+
 ## Limitations
 
 - This is an algorithm prototype for scheduled mono-forward-style training updates.
